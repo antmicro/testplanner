@@ -1,0 +1,22 @@
+[project]
+name = "testplanner"
+version = "0.0.1"
+description = "Initial testbench autogeneration tool"
+readme = "README.md"
+dependencies = [
+    "hjson",
+    "mistletoe",
+    "tabulate",
+]
+
+[build-system]
+requires = ["setuptools", "setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+testplanner = "testplanner.testplanner:main"
+
+[tool.setuptools.packages.find]
+include = [
+    "testplanner"
+]

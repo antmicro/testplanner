@@ -1,0 +1,60 @@
+<!DOCTYPE HTML>
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>
+    Collective simulation
+  </title>
+  <link rel="stylesheet" type="text/css" href="../cov.css">
+  <style>
+    table {
+      width: 50%;
+    }
+  </style>
+</head>
+
+<body>
+  <center>
+    <h1> Collective simulation report </h1>
+
+    <h3>Commit SHA: {{commit_sha}}</h3>
+    <h3>Commit created at: {{created_at}}</h3>
+
+  <table>
+      <p>Pass = {{sim_results._num_test_pass}}</p>
+      <p>Total = {{sim_results._num_test_total}}</p>
+      {% if sim_results.sim_results|length > 0 %}
+        {% if sim_results.sim_results[0]|length > 0 %}
+          <tr>
+            <td>Test name</td>
+            <td>Result</td>
+            <td></td>
+            <td></td>
+          </tr>
+          {% for i in range(sim_results.sim_results|length) -%}
+          <tr>
+            <td>{{sim_results.sim_results[i]["test_name"]}}</td>
+            <td>
+              {% if sim_results.sim_results[i]["result"] %}
+                <div style='color: green;'>PASS</div>
+              {% else %}
+                <div style='color: red;'>FAIL</div>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{{sim_results.sim_results[i]['report_html_path']}}">Coverage</a>
+            </td>
+            <td>
+              <a href="{{sim_results.sim_results[i]['test_log']}}">Test log</a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% endif %}
+      {% endif %}
+    </table>
+
+  </center>
+</body>
+
+</html>
