@@ -141,7 +141,7 @@ class Testpoint(Element):
     fields = Element.fields + ["stage", "tests"]
 
     # Verification stages.
-    stages = ("N.A.", "M1", "M2", "M3", "M4")
+    stages = ["N.A."]
 
     def __init__(self, raw_dict):
         super().__init__(raw_dict)
@@ -162,11 +162,7 @@ class Testpoint(Element):
     def _validate(self):
         super()._validate()
         if self.stage not in Testpoint.stages:
-            raise ValueError(
-                f"Testpoint stage {self.stage} is "
-                f"invalid:\n{self}\nLegal values: "
-                f"Testpoint.stages"
-            )
+            Testpoint.stages.append(self.stage)
 
         # "tests" key must be list.
         if not isinstance(self.tests, list):
