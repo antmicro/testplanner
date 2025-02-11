@@ -493,7 +493,8 @@ class Testplan:
 
         output.write("### Testpoints\n\n")
         for stage, testpoints in stages.items():
-            output.write(f"#### Stage {stage} Testpoints\n\n")
+            if stage != "N.A.":
+                output.write(f"#### Stage {stage} Testpoints\n\n")
             for tp in testpoints:
                 output.write(f"##### `{tp.name}`\n\n")
                 if len(tp.tests) == 0:
