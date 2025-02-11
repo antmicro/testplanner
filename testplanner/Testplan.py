@@ -495,15 +495,23 @@ class Testplan:
         src_rel_path = os.path.relpath(os.path.dirname(self.filename), os.path.dirname(output.name))
         if self.source_file_map is not None and "testplans" in self.source_file_map:
             found = False
-            for template in self.source_file_map["testplans"]:
-                pathcandidate = template.format(name=self.name)
-                full_path = self.repo_top.resolve() / pathcandidate
-                if full_path.exists():
+            for entry in self.source_file_map["testplans"]:
+                srcregex, templates = list(entry.items())[0]
+                if not re.match(srcregex, self.name):
+                    continue
+                for template in templates:
+                    pathcandidate = template.format(name=self.name, testplanpath=self.filename)
+                    full_path = self.repo_top.resolve() / pathcandidate
+                    if not full_path.exists():
+                        pathcandidate = template.format(name=self.name.lower(), testplanpath=self.filename)
+                        full_path = self.repo_top.resolve() / pathcandidate
+                        if not full_path.exists():
+                            continue
                     output.write(f"[Source file]({self.source_url_prefix}/{pathcandidate})\n\n")
                     found = True
                     break
-            if not found:
-                print(f"Source file for testplan {self.name} not found ({self.filename})!")
+                if not found:
+                    print(f'Source file for testplan "{self.name}" not found ({self.filename})!')
 
         output.write("### Testpoints\n\n")
         for stage, testpoints in stages.items():
