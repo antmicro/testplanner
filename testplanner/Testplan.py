@@ -489,7 +489,8 @@ class Testplan:
 
         src_rel_path = os.path.relpath(os.path.dirname(self.filename), os.path.dirname(output.name))
         src_file = Path(src_rel_path) / Path(self.filename.name)
-        output.write(f"[Source file]({src_file})\n\n")
+        #FIXME restore once we have proper link to the test
+        #output.write(f"[Source file]({src_file})\n\n")
 
         output.write("### Testpoints\n\n")
         for stage, testpoints in stages.items():
