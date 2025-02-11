@@ -6,6 +6,7 @@
 r"""Command-line tool to parse and process testplan Hjson
 
 """
+import yaml
 import argparse
 import logging
 import os
@@ -67,6 +68,20 @@ def main():
         help="input UVM testbench image file",
     )
     parser.add_argument("--output_dir", "-o", default=".", help="Output directory")
+    parser.add_argument(
+        "--project-root",
+        help="Path to the project's root directory",
+        type=Path,
+    )
+    parser.add_argument(
+        "--testplan-file-map",
+        help="Path to the map with test links",
+        type=Path,
+    )
+    parser.add_argument(
+        "--source-url-prefix",
+        help="Prefix for URLs to sources in generated files",
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug prints.")
 
     args = parser.parse_args()
@@ -95,6 +110,16 @@ def main():
     else:
         sim_results = None
 
+    source_file_map = None
+    if args.testplan_file_map:
+        with args.testplan_file_map.open() as file_map_fd:
+            source_file_map = yaml.safe_load(file_map_fd)
+
+    repo_root = args.project_root if args.project_root else None
+    print(args.project_root)
+
+    source_url_prefix = args.source_url_prefix if args.source_url_prefix else ""
+
     diagram_paths = {}
     if args.diagram_paths:
         for mapping in args.diagram_paths:
@@ -116,7 +141,13 @@ def main():
             diagram_path = diagram_paths[testplan_name]
 
         # Create the testplan object
-        testplan_obj = Testplan(testplan, diagram_path=diagram_path)
+        testplan_obj = Testplan(
+            testplan,
+            diagram_path=diagram_path,
+            repo_top=repo_root,
+            source_file_map=source_file_map,
+            source_url_prefix=source_url_prefix,
+        )
 
         if sim_results:
             out_name = testplan_stem + ".html"

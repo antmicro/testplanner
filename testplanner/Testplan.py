@@ -302,7 +302,7 @@ class Testplan:
         lines += [f"{c}" for c in self.covergroups]
         return "\n".join(lines)
 
-    def __init__(self, filename, repo_top=None, name=None, diagram_path=None):
+    def __init__(self, filename, repo_top=None, name=None, diagram_path=None, source_file_map=None, source_url_prefix=""):
         """Initialize the testplan.
 
         filename is the HJson file that captures the testplan. It may be
@@ -318,6 +318,9 @@ class Testplan:
         self.testpoints = []
         self.covergroups = []
         self.test_results_mapped = False
+        self.source_file_map = source_file_map
+        self.repo_top = repo_top
+        self.source_url_prefix = source_url_prefix
 
         # Split the filename into filename and tags, if provided.
         split = str(filename).split(":")
@@ -488,8 +491,17 @@ class Testplan:
             output.write(":::\n")
 
         src_rel_path = os.path.relpath(os.path.dirname(self.filename), os.path.dirname(output.name))
-        src_file = Path(src_rel_path) / Path(self.filename.name)
-        output.write(f"[Source file]({src_file})\n\n")
+        if self.source_file_map is not None and "testplans" in self.source_file_map:
+            found = False
+            for template in self.source_file_map["testplans"]:
+                pathcandidate = template.format(name=self.name)
+                full_path = self.repo_top.resolve() / pathcandidate
+                if full_path.exists():
+                    output.write(f"[Source file]({self.source_url_prefix}/{pathcandidate})\n\n")
+                    found = True
+                    break
+            if not found:
+                print(f"Source file for testplan {self.name} not found ({self.filename})!")
 
         output.write("### Testpoints\n\n")
         for stage, testpoints in stages.items():
