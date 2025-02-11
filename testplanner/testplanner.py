@@ -116,7 +116,6 @@ def main():
             source_file_map = yaml.safe_load(file_map_fd)
 
     repo_root = args.project_root if args.project_root else None
-    print(args.project_root)
 
     source_url_prefix = args.source_url_prefix if args.source_url_prefix else ""
 
