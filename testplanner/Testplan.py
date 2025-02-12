@@ -144,6 +144,8 @@ class Testpoint(Element):
     stages = ["N.A."]
 
     def __init__(self, raw_dict):
+        if "stage" not in raw_dict:
+            raw_dict["stage"] = "N.A."
         super().__init__(raw_dict)
 
         # List of Result objects indicating test results mapped to this
