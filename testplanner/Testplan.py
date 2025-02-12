@@ -515,10 +515,12 @@ class Testplan:
 
         output.write("### Testpoints\n\n")
         for stage, testpoints in stages.items():
+            testpoint_header = "####"
             if stage != "N.A.":
                 output.write(f"#### Stage {stage} Testpoints\n\n")
+                testpoint_header = "#####"
             for tp in testpoints:
-                output.write(f"##### `{tp.name}`\n\n")
+                output.write(f"{testpoint_header} `{tp.name}`\n\n")
                 if len(tp.tests) == 0:
                     output.write("No Tests Implemented")
                 elif len(tp.tests) == 1:
