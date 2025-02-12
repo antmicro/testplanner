@@ -21,13 +21,15 @@ from tabulate import tabulate
 class Result:
     """The results for a single test"""
 
-    def __init__(self, name, passing=0, total=0, job_runtime=None, simulated_time=None):
+    def __init__(self, name, passing=0, total=0, job_runtime=None, simulated_time=None, file=None, lineno=None):
         self.name = name
         self.passing = passing
         self.total = total
         self.job_runtime = job_runtime
         self.simulated_time = simulated_time
         self.mapped = False
+        self.file = file
+        self.lineno = lineno
 
 
 class Element:
@@ -682,11 +684,16 @@ class Testplan:
                 job_runtime = "" if tr.job_runtime is None else str(tr.job_runtime)
                 simulated_time = "" if tr.simulated_time is None else str(tr.simulated_time)
 
+                test_name = tr.name
+                if tr.file:
+                    test_name = f"[{tr.name}]({self.source_url_prefix}/{tr.file}"
+                    if tr.lineno is not None:
+                        test_name += f"#L{tr.lineno})"
                 table.append(
                     [
                         stage,
                         tp_name,
-                        tr.name,
+                        test_name,
                         job_runtime,
                         simulated_time,
                         tr.passing,
@@ -778,7 +785,7 @@ class Testplan:
         test_results = []
         for item in test_results_:
             try:
-                tr = Result(item["name"], item["passing"], item["total"])
+                tr = Result(item["name"], item["passing"], item["total"], file=item.get("file", None), lineno=item.get("lineno", None))
                 test_results.append(tr)
             except KeyError as e:
                 print(f"Error: data in {sim_results_file} is malformed!\n{e}")
