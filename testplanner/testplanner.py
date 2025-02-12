@@ -67,7 +67,18 @@ def main():
         nargs="*",
         help="input UVM testbench image file",
     )
-    parser.add_argument("--output_dir", "-o", default=".", help="Output directory")
+    parser.add_argument(
+        "-o",
+        "--output",
+        default=".",
+        help="Path to output directory for multiple files's output, path to file for single-file output",
+        type=Path,
+    )
+    parser.add_argument(
+        "--sim-results-format",
+        help="Format of the output, can be 'html' or 'md'",
+        choices=["html", "md"],
+    )
     parser.add_argument(
         "--project-root",
         help="Path to the project's root directory",
@@ -86,16 +97,26 @@ def main():
 
     args = parser.parse_args()
 
+    format = "html" if args.sim_results else "md"
+    if args.sim_results_format and args.sim_results:
+        format = args.sim_results_format
+
     # Basic logging
     level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(level=level)
 
     # Process args
     logging.debug("Args:")
-    output_dir = Path(os.path.abspath(args.output_dir))
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
-    logging.debug(f"output_dir = {output_dir}")
+    single_file = True
+    output = args.output.resolve()
+    if args.output.suffix in [".html", ".md"]:
+        single_file = True
+        output.parent.mkdir(exist_ok=True, parents=True)
+        logging.debug(f"output_file = {output}")
+    else:
+        single_file = False
+        output.mkdir(exist_ok=True, parents=True)
+        logging.debug(f"output_dir = {output}")
 
     testplans = [Path(os.path.abspath(s)) for s in args.testplans]
     logging.debug(f"testplans = {testplans}")
@@ -148,24 +169,28 @@ def main():
             source_url_prefix=source_url_prefix,
         )
 
-        if sim_results:
-            out_name = testplan_stem + ".html"
+        if single_file:
+            output_file = output
         else:
-            out_name = testplan_stem + ".md"
-        output_file = Path(output_dir) / out_name
-        logging.debug(f"output_file = {output_file}")
+            output_file = Path(output) / f"{testplan_stem}.{format}"
+            logging.debug(f"output_file = {output_file}")
+            copy2(STYLES_DIR / "main.css", output)
+            copy2(STYLES_DIR / "cov.css", output)
 
-        with open(output_file, "w") as f:
+        with open(output_file, "a" if single_file else "w") as f:
             # Map testplan to sim_result by index in the list
             if sim_results:
                 id = testplans.index(testplan)
                 sim_result = sim_results[id]
-                f.write(testplan_obj.get_sim_results(sim_result, fmt="html"))
+                f.write(testplan_obj.get_sim_results(sim_result, fmt=format))
+                f.write('\n')
             else:
                 testplan_obj.write_testplan_doc(f)
                 f.write("\n")
-        copy2(STYLES_DIR / "main.css", output_dir)
-        copy2(STYLES_DIR / "cov.css", output_dir)
+
+    if single_file:
+        copy2(STYLES_DIR / "main.css", output.parent)
+        copy2(STYLES_DIR / "cov.css", output.parent)
 
     return 0
 
