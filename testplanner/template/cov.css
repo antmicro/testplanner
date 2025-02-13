@@ -24,15 +24,16 @@ a:link {
 
 /* All views: standard link - visited format */
 a:visited {
-  color: #E9EBFA;
+  color: #00D0C9;
   text-decoration: underline;
+  font-family: 'Roboto', sans-serif;
 }
 
 /* All views: standard link - activated format */
 a:active {
   color: #00D0C9;
-  color: #E9EBFA;
   text-decoration: underline;
+  font-family: 'Roboto', sans-serif;
 }
 
 center {
