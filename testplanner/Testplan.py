@@ -686,6 +686,9 @@ class Testplan:
 
                 test_name = tr.name
                 if tr.file:
+                    if Path(tr.file).exists():
+                        if Path(tr.file).is_symlink():
+                            tr.file = str(Path(tr.file).resolve().relative_to(self.repo_top))
                     test_name = f"[{tr.name}]({self.source_url_prefix}/{tr.file}"
                     if tr.lineno is not None:
                         test_name += f"#L{tr.lineno})"
