@@ -681,8 +681,8 @@ class Testplan:
                     continue
                 pass_rate = self._get_percentage(tr.passing, tr.total)
 
-                job_runtime = "" if tr.job_runtime is None else str(tr.job_runtime)
-                simulated_time = "" if tr.simulated_time is None else str(tr.simulated_time)
+                job_runtime = "" if tr.job_runtime is None else f"{tr.job_runtime:.5f}"
+                simulated_time = "" if tr.simulated_time is None else f"{tr.simulated_time:.5f}"
 
                 test_name = tr.name
                 if tr.file:
@@ -788,7 +788,7 @@ class Testplan:
         test_results = []
         for item in test_results_:
             try:
-                tr = Result(item["name"], item["passing"], item["total"], file=item.get("file", None), lineno=item.get("lineno", None))
+                tr = Result(item["name"], item["passing"], item["total"], simulated_time=item.get("simulated_time", None), job_runtime=item.get("job_runtime", None), file=item.get("file", None), lineno=item.get("lineno", None))
                 test_results.append(tr)
             except KeyError as e:
                 print(f"Error: data in {sim_results_file} is malformed!\n{e}")

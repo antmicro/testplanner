@@ -1,6 +1,7 @@
 import sys
 import hjson
 import xml.etree.ElementTree as ET
+from statistics import mean
 import argparse
 from datetime import datetime
 from pathlib import Path
@@ -43,6 +44,9 @@ def main():
 
     test_names_to_entries = dict()
 
+    # TODO (glatosinski): We need to adjust passing/total and
+    # simulated_time/job_runtime to what they should be
+
     for resultspath in args.input_xmls:
         root = ET.parse(resultspath).getroot()
         for testcase in root.findall('.//testcase'):
@@ -50,10 +54,13 @@ def main():
             if tname.startswith('test_'):
                 tname = tname[5:]
             if tname in test_names_to_entries:
-                test_names_to_entries[tname]["skipped"] += len(testcase.findall("skipped"))
-                test_names_to_entries[tname]["failure"] += len(testcase.findall("failure"))
+                print(f"WARNING: test name '{tname}' reappears in test results in {resultspath}, previously in {test_names_to_entries[tname]['xmlpath'][-1]}")  # noqa: E501
+                test_names_to_entries[tname]["skipped"] += len(testcase.findall("skipped"))  # noqa: E501
+                test_names_to_entries[tname]["failure"] += len(testcase.findall("failure"))  # noqa: E501
                 test_names_to_entries[tname]["total"] += 1
                 test_names_to_entries[tname]["xmlpath"].append(resultspath)
+                test_names_to_entries[tname]["simulated_time"].append(float(testcase.attrib["sim_time_ns"]))
+                test_names_to_entries[tname]["job_runtime"].append(float(testcase.attrib["time"]))
             else:
                 entry = testcase.attrib
                 entry["skipped"] = len(testcase.findall("skipped"))
@@ -61,6 +68,8 @@ def main():
                 entry["total"] = 1
                 entry["xmlpath"] = [resultspath]
                 entry["name"] = tname
+                entry["simulated_time"] = [float(testcase.attrib["sim_time_ns"])]
+                entry["job_runtime"] = [float(testcase.attrib["time"])]
                 test_names_to_entries[tname] = entry
 
     for testplanpath in args.input_testplans:
@@ -71,17 +80,17 @@ def main():
             if test["name"] not in test_names_to_entries:
                 continue
             tdata = test_names_to_entries[test["name"]]
-            if test["name"] not in tests_stats:
-                tests_stats[test["name"]] = {
-                    "name": test["name"],
-                    "passing": 0,
-                    "total": 0,
-                    "file": str(Path(tdata["file"]).relative_to(test_root_dir)),
-                    "lineno": tdata["lineno"],
-                }
-            tests_stats[test["name"]]["total"] += tdata["total"]
-            if tdata["skipped"] == 0 and tdata["failure"] == 0:
-                tests_stats[test["name"]]["passing"] += tdata["total"] - tdata["skipped"] - tdata["failure"]
+            if test["name"] in tests_stats:
+                raise RuntimeError("Multiple tests with the same name")
+            tests_stats[test["name"]] = {
+                "name": test["name"],
+                "passing": tdata["total"] - tdata["skipped"] - tdata["failure"],
+                "total": tdata["total"],
+                "simulated_time": mean(tdata["simulated_time"]),
+                "job_runtime": mean(tdata["job_runtime"]),
+                "file": str(Path(tdata["file"]).relative_to(test_root_dir)),
+                "lineno": tdata["lineno"],
+            }
         out_hjson = {
             "timestamp": datetime.now().strftime("%D/%M/%Y %H:%M"),
             "test_results": [val for val in tests_stats.values()]
