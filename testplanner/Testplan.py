@@ -476,7 +476,7 @@ class Testplan:
         # Build regressions dict into a hjson like data structure
         return [{"name": ms, "tests": list(regressions[ms])} for ms in regressions]
 
-    def write_testplan_doc(self, output: TextIO) -> None:
+    def write_testplan_doc(self, output: TextIO, sim_results_path: Path = None) -> None:
         """Write testplan documentation in markdown from the hjson testplan."""
 
         stages = {}
@@ -514,6 +514,11 @@ class Testplan:
                     break
                 if not found:
                     print(f'Source file for testplan "{self.name}" not found ({self.filename})!')
+
+        if sim_results_path:
+            # TODO (glatosinski): To fix Myst's link resolution, {.external} attribute is
+            # added to link. This requires "inline_attrs" extension in myst_enable_extensions
+            output.write(f"[Test results](./{os.path.relpath(sim_results_path, Path(output.name).parent)}){{.external}}\n\n")
 
         output.write("### Testpoints\n\n")
         for stage, testpoints in stages.items():

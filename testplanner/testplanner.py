@@ -19,6 +19,20 @@ from testplanner.Testplan import Testplan
 STYLES_DIR = Path(Path(__file__).parent.resolve() / "template")
 
 
+def prepare_output_paths(output_path):
+    if output_path is None:
+        return False
+    output_path_single = False
+    if output_path and output_path.suffix in [".md", ".html"]:
+        output_path_single = True
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        if output_path.exists():
+            output_path.unlink()
+    else:
+        output_path.mkdir(parents=True, exist_ok=True)
+    return output_path_single
+
+
 def main():
     """
     Supported calls:
@@ -55,24 +69,31 @@ def main():
     )
     parser.add_argument(
         "-s",
-        "--sim_results",
+        "--sim-results",
         metavar="<sim-results-file>",
         nargs="*",
         help="input HJSON simulation results file",
     )
     parser.add_argument(
         "-d",
-        "--diagram_paths",
+        "--diagram-paths",
         metavar="testplan_file=diagram_path",
         nargs="*",
         help="input UVM testbench image file",
     )
     parser.add_argument(
-        "-o",
-        "--output",
-        default=".",
+        "-ot",
+        "--output-testplan",
         help="Path to output directory for multiple files's output, path to file for single-file output",
         type=Path,
+        required=not any([flag in sys.argv for flag in ["--sim-results", "-s"]]),
+    )
+    parser.add_argument(
+        "-os",
+        "--output-sim-results",
+        help="Path to output directory for multiple files's output, path to file for single-file output",
+        type=Path,
+        required=any([flag in sys.argv for flag in ["--sim-results", "-s"]]),
     )
     parser.add_argument(
         "--sim-results-format",
@@ -107,16 +128,10 @@ def main():
 
     # Process args
     logging.debug("Args:")
-    single_file = True
-    output = args.output.resolve()
-    if args.output.suffix in [".html", ".md"]:
-        single_file = True
-        output.parent.mkdir(exist_ok=True, parents=True)
-        logging.debug(f"output_file = {output}")
-    else:
-        single_file = False
-        output.mkdir(exist_ok=True, parents=True)
-        logging.debug(f"output_dir = {output}")
+    output_testplan = args.output_testplan.resolve() if args.output_testplan else None
+    output_testplan_single = prepare_output_paths(output_testplan)
+    output_sim_results = args.output_sim_results.resolve() if args.output_sim_results else None
+    output_sim_results_single = prepare_output_paths(output_sim_results)
 
     testplans = [Path(os.path.abspath(s)) for s in args.testplans]
     logging.debug(f"testplans = {testplans}")
@@ -148,7 +163,7 @@ def main():
         logging.debug(f"diagram_paths = {diagram_paths.items()}")
 
     # Process testplans
-    for testplan in testplans:
+    for id, testplan in enumerate(testplans):
         logging.debug("Processing:")
         testplan_name = Path(testplan).name
         logging.debug(f"testplan_name = {testplan_name}")
@@ -169,28 +184,22 @@ def main():
             source_url_prefix=source_url_prefix,
         )
 
-        if single_file:
-            output_file = output
-        else:
-            output_file = Path(output) / f"{testplan_stem}.{format}"
-            logging.debug(f"output_file = {output_file}")
-            copy2(STYLES_DIR / "main.css", output)
-            copy2(STYLES_DIR / "cov.css", output)
+        output_sim_path = None
 
-        with open(output_file, "a" if single_file else "w") as f:
-            # Map testplan to sim_result by index in the list
-            if sim_results:
-                id = testplans.index(testplan)
-                sim_result = sim_results[id]
+        if output_sim_results:
+            sim_result = sim_results[id]
+            output_sim_path = output_sim_results if output_sim_results_single else Path(output_sim_results) / f"{testplan_stem}.{format}"
+            with open(output_sim_path, "a" if output_sim_results_single else "w") as f:
                 f.write(testplan_obj.get_sim_results(sim_result, fmt=format))
                 f.write('\n')
-            else:
-                testplan_obj.write_testplan_doc(f)
-                f.write("\n")
+            copy2(STYLES_DIR / "main.css", output_sim_path.parent)
+            copy2(STYLES_DIR / "cov.css", output_sim_path.parent)
 
-    if single_file:
-        copy2(STYLES_DIR / "main.css", output.parent)
-        copy2(STYLES_DIR / "cov.css", output.parent)
+        if output_testplan:
+            output_path = output_testplan if output_testplan_single else Path(output_testplan) / f"{testplan_stem}.{format}"
+            with open(output_path, "a" if output_testplan_single else "w") as f:
+                testplan_obj.write_testplan_doc(f, output_sim_path)
+                f.write("\n")
 
     return 0
 
