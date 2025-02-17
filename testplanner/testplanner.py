@@ -184,22 +184,25 @@ def main():
             source_url_prefix=source_url_prefix,
         )
 
+        sim_result = None
         output_sim_path = None
 
         if output_sim_results:
             sim_result = sim_results[id]
             output_sim_path = output_sim_results if output_sim_results_single else Path(output_sim_results) / f"{testplan_stem}.{format}"
+
+        if output_testplan:
+            output_path = output_testplan if output_testplan_single else Path(output_testplan) / f"{testplan_stem}.{format}"
+            with open(output_path, "a" if output_testplan_single else "w") as f:
+                testplan_obj.write_testplan_doc(f, sim_result, output_sim_path)
+                f.write("\n")
+
+        if output_sim_results:
             with open(output_sim_path, "a" if output_sim_results_single else "w") as f:
                 f.write(testplan_obj.get_sim_results(sim_result, fmt=format))
                 f.write('\n')
             copy2(STYLES_DIR / "main.css", output_sim_path.parent)
             copy2(STYLES_DIR / "cov.css", output_sim_path.parent)
-
-        if output_testplan:
-            output_path = output_testplan if output_testplan_single else Path(output_testplan) / f"{testplan_stem}.{format}"
-            with open(output_path, "a" if output_testplan_single else "w") as f:
-                testplan_obj.write_testplan_doc(f, output_sim_path)
-                f.write("\n")
 
     return 0
 
