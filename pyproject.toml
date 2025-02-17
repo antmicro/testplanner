@@ -16,6 +16,7 @@ build-backend = "setuptools.build_meta"
 
 [project.scripts]
 testplanner = "testplanner.testplanner:main"
+cocotbxml-to-hjson = "testplanner.cocotbxml_to_hjson:main"
 
 [tool.setuptools.packages.find]
 include = [
