@@ -667,7 +667,6 @@ class Testplan:
 
         assert self.test_results_mapped, "Have you invoked map_test_results()?"
         header = [
-            "Stage",
             "Name",
             "Tests",
             "Max Job Runtime",
@@ -676,7 +675,16 @@ class Testplan:
             "Total",
             "Pass Rate",
         ]
-        colalign = ("center",) * 2 + ("left",) + ("center",) * 5
+        stages = set()
+        for tp in self.testpoints:
+            stage = "" if tp.stage == "N.A." else tp.stage
+            stages.add(stage)
+        skip_stages = False
+        if len(stages) > 1 or list(stages)[0] != "":
+            header = ["Stage"] + header
+        else:
+            skip_stages = True
+        colalign = ("center",) * (1 if skip_stages else 2) + ("left",) + ("center",) * 5
         table = []
         for tp in self.testpoints:
             stage = "" if tp.stage == "N.A." else tp.stage
@@ -698,8 +706,8 @@ class Testplan:
                     if tr.lineno is not None:
                         test_name += f"#L{tr.lineno})"
                 table.append(
+                    ([stage] if not skip_stages else []) +
                     [
-                        stage,
                         tp_name,
                         test_name,
                         job_runtime,
@@ -723,12 +731,16 @@ class Testplan:
         assert self.test_results_mapped, "Have you invoked map_test_results()?"
         header = []
         table = []
+        skip_stage = False
+        stages = list(set([key for key in self.progress.keys()]))
+        if len(stages) == 1 and stages[0] == "N.A.":
+            skip_stage = True
         for key in self.progress:
             stat = self.progress[key]
             values = [v for v in stat.values()]
             if not header:
-                header = ["Items"] + [k.capitalize() for k in stat]
-            table.append([key] + values)
+                header = ([] if skip_stage else ["Stage"]) + [k.capitalize() for k in stat]
+            table.append(([] if skip_stage else [key if key != "N.A." else ""]) + values)
 
         text = "\n### Testplan Progress\n"
         colalign = ("center",) * len(header)
