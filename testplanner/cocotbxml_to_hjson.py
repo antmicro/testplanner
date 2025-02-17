@@ -37,10 +37,17 @@ def main():
         help="Base path for tests",
         type=Path,
     )
+    parser.add_argument(
+        "--testplans-base-dir",
+        help="Base path for testplans",
+        default=Path("."),
+        type=Path,
+    )
 
     args = parser.parse_args()
 
     test_root_dir = args.tests_base_dir if args.tests_base_dir else Path(".")
+    testplan_root_dir = args.testplans_base_dir.resolve()
 
     test_names_to_entries = dict()
 
@@ -73,6 +80,7 @@ def main():
                 test_names_to_entries[tname] = entry
 
     for testplanpath in args.input_testplans:
+        testplanpath = testplanpath.resolve()
         tests_stats = dict()
         with open(testplanpath, 'r') as f:
             testplan = hjson.load(f)
@@ -95,7 +103,7 @@ def main():
             "timestamp": datetime.now().strftime("%D/%M/%Y %H:%M"),
             "test_results": [val for val in tests_stats.values()]
         }
-        out_path = args.output_dir / testplanpath
+        out_path = args.output_dir / testplanpath.relative_to(testplan_root_dir)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         with out_path.open("w") as f:
             hjson.dump(out_hjson, f)
