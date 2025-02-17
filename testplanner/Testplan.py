@@ -476,7 +476,7 @@ class Testplan:
         # Build regressions dict into a hjson like data structure
         return [{"name": ms, "tests": list(regressions[ms])} for ms in regressions]
 
-    def write_testplan_doc(self, output: TextIO, sim_results_path: Path = None) -> None:
+    def write_testplan_doc(self, output: TextIO, sim_results_path: Path = None, target_sim_results_path: Path = None) -> None:
         """Write testplan documentation in markdown from the hjson testplan."""
 
         stages = {}
@@ -515,10 +515,18 @@ class Testplan:
                 if not found:
                     print(f'Source file for testplan "{self.name}" not found ({self.filename})!')
 
+        tests_to_urls = dict()
         if sim_results_path:
+            sim_results = Testplan._parse_hjson(sim_results_path)
+            sim_results = sim_results.get("test_results", [])
+            for item in sim_results:
+                if all(f in item for f in ["name", "file"]):
+                    tests_to_urls[item["name"]] = f"{self.source_url_prefix}/{item['file']}"
+                    if "lineno" in item:
+                        tests_to_urls[item["name"]] += f"#L{item['lineno']}"
             # TODO (glatosinski): To fix Myst's link resolution, {.external} attribute is
             # added to link. This requires "inline_attrs" extension in myst_enable_extensions
-            output.write(f"[Test results](./{os.path.relpath(sim_results_path, Path(output.name).parent)}){{.external}}\n\n")
+            output.write(f"[Test results](./{os.path.relpath(target_sim_results_path, Path(output.name).parent)}){{.external}}\n\n")
 
         output.write("### Testpoints\n\n")
         for stage, testpoints in stages.items():
@@ -531,10 +539,17 @@ class Testplan:
                 if len(tp.tests) == 0:
                     output.write("No Tests Implemented")
                 elif len(tp.tests) == 1:
-                    output.write(f"Test: `{tp.tests[0]}`")
+                    test_name = f"`{tp.tests[0]}`"
+                    if tp.tests[0] in tests_to_urls:
+                        test_name = f"[{test_name}]({tests_to_urls[tp.tests[0]]})"
+                    output.write(f"Test: {test_name}")
                 else:
                     output.write("Tests:\n")
-                    output.writelines([f"- `{test}`\n" for test in tp.tests])
+                    for test in tp.tests:
+                        if test in tests_to_urls:
+                            output.write(f"- [{test}]({tests_to_urls[test]})\n")
+                        else:
+                            output.write(f"- `{test}`\n")
 
                 output.write("\n\n" + tp.desc.strip() + "\n\n")
 
@@ -705,6 +720,8 @@ class Testplan:
                     test_name = f"[{tr.name}]({self.source_url_prefix}/{tr.file}"
                     if tr.lineno is not None:
                         test_name += f"#L{tr.lineno})"
+                    else:
+                        test_name += ")"
                 table.append(
                     ([stage] if not skip_stages else []) +
                     [
