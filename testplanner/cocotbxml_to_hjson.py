@@ -84,21 +84,22 @@ def main():
         tests_stats = dict()
         with open(testplanpath, 'r') as f:
             testplan = hjson.load(f)
-        for test in testplan["testpoints"]:
-            if test["name"] not in test_names_to_entries:
-                continue
-            tdata = test_names_to_entries[test["name"]]
-            if test["name"] in tests_stats:
-                raise RuntimeError("Multiple tests with the same name")
-            tests_stats[test["name"]] = {
-                "name": test["name"],
-                "passing": tdata["total"] - tdata["skipped"] - tdata["failure"],
-                "total": tdata["total"],
-                "simulated_time": mean(tdata["simulated_time"]),
-                "job_runtime": mean(tdata["job_runtime"]),
-                "file": str(Path(tdata["file"]).relative_to(test_root_dir)),
-                "lineno": tdata["lineno"],
-            }
+        for testpoint in testplan["testpoints"]:
+            for test in testpoint["tests"]:
+                if test not in test_names_to_entries:
+                    continue
+                tdata = test_names_to_entries[test]
+                if test in tests_stats:
+                    raise RuntimeError("Multiple tests with the same name")
+                tests_stats[test] = {
+                    "name": test,
+                    "passing": tdata["total"] - tdata["skipped"] - tdata["failure"],
+                    "total": tdata["total"],
+                    "simulated_time": mean(tdata["simulated_time"]),
+                    "job_runtime": mean(tdata["job_runtime"]),
+                    "file": str(Path(tdata["file"]).relative_to(test_root_dir)),
+                    "lineno": tdata["lineno"],
+                }
         out_hjson = {
             "timestamp": datetime.now().strftime("%D/%M/%Y %H:%M"),
             "test_results": [val for val in tests_stats.values()]
