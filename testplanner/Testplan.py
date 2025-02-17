@@ -483,7 +483,7 @@ class Testplan:
         for tp in self.testpoints:
             stages.setdefault(tp.stage, list()).append(tp)
 
-        output.write(f"## {self.name}\n\n")
+        output.write(f"# {self.name}\n\n")
 
         if self.diagram_path:
             diagram_rel_path = os.path.relpath(
@@ -528,12 +528,12 @@ class Testplan:
             # added to link. This requires "inline_attrs" extension in myst_enable_extensions
             output.write(f"[Test results](./{os.path.relpath(target_sim_results_path, Path(output.name).parent)}){{.external}}\n\n")
 
-        output.write("### Testpoints\n\n")
+        output.write("## Testpoints\n\n")
         for stage, testpoints in stages.items():
-            testpoint_header = "####"
+            testpoint_header = "###"
             if stage != "N.A.":
-                output.write(f"#### Stage {stage} Testpoints\n\n")
-                testpoint_header = "#####"
+                output.write(f"### Stage {stage} Testpoints\n\n")
+                testpoint_header = "####"
             for tp in testpoints:
                 output.write(f"{testpoint_header} `{tp.name}`\n\n")
                 if len(tp.tests) == 0:
@@ -554,9 +554,9 @@ class Testplan:
                 output.write("\n\n" + tp.desc.strip() + "\n\n")
 
         if self.covergroups:
-            output.write("### Covergroups\n\n")
+            output.write("## Covergroups\n\n")
             for covergroup in self.covergroups:
-                output.write(f"#### {covergroup.name}\n\n{covergroup.desc.strip()}\n\n")
+                output.write(f"### {covergroup.name}\n\n{covergroup.desc.strip()}\n\n")
 
     def map_test_results(self, test_results):
         """Map test results to testpoints."""
