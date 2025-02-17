@@ -13,6 +13,8 @@ import os
 import sys
 from pathlib import Path
 from shutil import copy2
+import mistletoe
+from tabulate import tabulate
 
 from testplanner.Testplan import Testplan
 
@@ -114,6 +116,18 @@ def main():
         "--source-url-prefix",
         help="Prefix for URLs to sources in generated files",
     )
+    parser.add_argument(
+        "-osum",
+        "--output-summary",
+        help="Path to output HTML/Markdown file containing summary of executed tests",
+        type=Path,
+    )
+    parser.add_argument(
+        "--output-summary-title",
+        help="Title of the output summary",
+        default="Tests' summary",
+        type=str,
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug prints.")
 
     args = parser.parse_args()
@@ -162,6 +176,8 @@ def main():
             diagram_paths[key] = path
         logging.debug(f"diagram_paths = {diagram_paths.items()}")
 
+    tests_summary = []
+
     # Process testplans
     for id, testplan in enumerate(testplans):
         logging.debug("Processing:")
@@ -197,12 +213,31 @@ def main():
                 testplan_obj.write_testplan_doc(f, sim_result, output_sim_path)
                 f.write("\n")
 
+        if args.output_summary:
+            tests_summary.append(testplan_obj.get_testplan_summary(args.output_summary, sim_result, output_sim_path))
+
         if output_sim_results:
             with open(output_sim_path, "a" if output_sim_results_single else "w") as f:
                 f.write(testplan_obj.get_sim_results(sim_result, fmt=format))
                 f.write('\n')
             copy2(STYLES_DIR / "main.css", output_sim_path.parent)
             copy2(STYLES_DIR / "cov.css", output_sim_path.parent)
+
+    if args.output_summary:
+        header = ["Name", "Passing", "Total", "Pass Rate"]
+        colalign = ["center", "right", "right", "right"]
+        summary = f"# {args.output_summary_title}\n\n"
+        summary += tabulate(tests_summary, headers=header, tablefmt="pipe", colalign=colalign)
+        summary += "\n"
+        with args.output_summary.open('w') as f:
+            if args.output_summary.suffix == ".html":
+                result = Testplan.get_dv_style_css()
+                result += mistletoe.markdown(summary)
+                result = f"<center>\n{result}\n</center>"
+                result = result.replace("<table>", '<table class="dv">')
+                f.write(result)
+            else:
+                f.write(summary)
 
     return 0
 

@@ -243,7 +243,7 @@ class Testplan:
     element_cls = {"testpoint": Testpoint, "covergroup": Covergroup}
 
     @staticmethod
-    def _parse_hjson(filename):
+    def _parse_hjson(filename: Path):
         """Parses an input file with HJson and returns a dict."""
         try:
             return hjson.load(open(filename, "r"))
@@ -476,7 +476,7 @@ class Testplan:
         # Build regressions dict into a hjson like data structure
         return [{"name": ms, "tests": list(regressions[ms])} for ms in regressions]
 
-    def write_testplan_doc(self, output: TextIO, sim_results_path: Path = None, target_sim_results_path: Path = None) -> None:
+    def write_testplan_doc(self, output: TextIO, sim_results_path: Path = None, target_sim_results_path: Path = None) -> None:  # noqa: E501
         """Write testplan documentation in markdown from the hjson testplan."""
 
         stages = {}
@@ -765,7 +765,8 @@ class Testplan:
         text += "\n"
         return text
 
-    def get_cov_results_table(self, cov_results):
+    @staticmethod
+    def get_cov_results_table(cov_results):
         """Returns the coverage in a table format.
 
         cov_results is a list of dicts with name and result keys, representing
@@ -837,7 +838,7 @@ class Testplan:
         text += self.get_progress_table()
 
         cov_results = sim_results.get("cov_results", [])
-        text += self.get_cov_results_table(cov_results)
+        text += Testplan.get_cov_results_table(cov_results)
 
         if fmt == "html":
             text = self.get_dv_style_css() + mistletoe.markdown(text)
@@ -848,6 +849,27 @@ class Testplan:
             """
             text = text.replace("<table>", '<table class="dv">')
         return text
+
+    def get_testplan_summary(self, summary_output_path: Path, sim_results_file: Path, target_sim_results_path: Path):  # noqa: E501
+        """
+        Provides a summary for testplan results.
+
+        Provides an array with an URL to simulation results, passing tests,
+        total number of tests, and percentage of succeeding tests.
+        """
+        sim_results = Testplan._parse_hjson(sim_results_file)
+        test_results_ = sim_results.get("test_results", [])
+        total = 0
+        passing = 0
+        for item in test_results_:
+            total += item.get("total", 0)
+            passing += item.get("passing", 0)
+        return [
+            f"[{self.name}]({os.path.relpath(target_sim_results_path, summary_output_path.parent)})",  # noqa: E501
+            passing,
+            total,
+            self._get_percentage(passing, total)
+        ]
 
 
 def _merge_dicts(list1, list2, use_list1_for_defaults=True):
