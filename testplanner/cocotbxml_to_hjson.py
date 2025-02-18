@@ -119,15 +119,18 @@ def main():
                     "job_runtime": mean(tdata["job_runtime"]),
                 }
                 if "file" in tdata:
-                    parents = Path(tdata["file"]).relative_to(test_root_dir).parents
-                    ignore = False
-                    for idir in ignore_dirs:
-                        if idir in parents:
-                            ignore = True
-                            break
-                    if not ignore:
-                        tests_stats[test]["file"] = str(Path(tdata["file"]).relative_to(test_root_dir))
-                        tests_stats[test]["lineno"] = tdata["lineno"]
+                    if test_root_dir.resolve() in Path(tdata["file"]).resolve().parents:
+                        parents = Path(tdata["file"]).relative_to(test_root_dir).parents
+                        ignore = False
+                        for idir in ignore_dirs:
+                            if idir in parents:
+                                ignore = True
+                                break
+                        if not ignore:
+                            tests_stats[test]["file"] = str(Path(tdata["file"]).relative_to(test_root_dir))
+                            tests_stats[test]["lineno"] = tdata["lineno"]
+                    else:
+                        logging.warning(f'Path in XML test "{tdata["file"]}" is outside "{test_root_dir.resolve()}"')
         out_hjson = {
             "timestamp": datetime.now().strftime("%D/%M/%Y %H:%M"),
             "test_results": [val for val in tests_stats.values()]
