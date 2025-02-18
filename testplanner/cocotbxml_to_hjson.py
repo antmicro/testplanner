@@ -1,3 +1,4 @@
+import re
 import sys
 import hjson
 import xml.etree.ElementTree as ET
@@ -60,6 +61,8 @@ def main():
             tname = testcase.attrib["name"]
             if tname.startswith('test_'):
                 tname = tname[5:]
+            if matched := re.match(r"^(.+)_(\d+)$", tname):
+                tname = matched.group(1)
             if tname in test_names_to_entries:
                 print(f"WARNING: test name '{tname}' reappears in test results in {resultspath}, previously in {test_names_to_entries[tname]['xmlpath'][-1]}")  # noqa: E501
                 test_names_to_entries[tname]["skipped"] += len(testcase.findall("skipped"))  # noqa: E501
