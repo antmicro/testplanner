@@ -1,6 +1,7 @@
 import re
 import sys
 import hjson
+import logging
 import xml.etree.ElementTree as ET
 from statistics import mean
 import argparse
@@ -51,12 +52,20 @@ def main():
         default=Path("."),
         type=Path,
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable debug prints.",
+    )
 
     args = parser.parse_args()
 
     test_root_dir = args.tests_base_dir if args.tests_base_dir else Path(".")
     testplan_root_dir = args.testplans_base_dir.resolve()
     ignore_dirs = args.tests_ignore_dirs if args.tests_ignore_dirs else []
+
+    level = logging.INFO if args.verbose else logging.WARNING
+    logging.basicConfig(level=level)
 
     test_names_to_entries = dict()
 
@@ -72,7 +81,7 @@ def main():
             if matched := re.match(r"^(.+)_(\d+)$", tname):
                 tname = matched.group(1)
             if tname in test_names_to_entries:
-                print(f"WARNING: test name '{tname}' reappears in test results in {resultspath}, previously in {test_names_to_entries[tname]['xmlpath'][-1]}")  # noqa: E501
+                logging.info(f"Test name '{tname}' reappears in test results in {resultspath}, previously in {test_names_to_entries[tname]['xmlpath'][-1]}")  # noqa: E501
                 test_names_to_entries[tname]["skipped"] += len(testcase.findall("skipped"))  # noqa: E501
                 test_names_to_entries[tname]["failure"] += len(testcase.findall("failure"))  # noqa: E501
                 test_names_to_entries[tname]["total"] += 1
