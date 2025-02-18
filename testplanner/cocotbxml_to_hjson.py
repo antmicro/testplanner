@@ -36,6 +36,7 @@ def main():
     parser.add_argument(
         "--tests-base-dir",
         help="Base path for tests",
+        default=Path("."),
         type=Path,
     )
     parser.add_argument(
