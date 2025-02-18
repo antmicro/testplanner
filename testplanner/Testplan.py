@@ -521,6 +521,8 @@ class Testplan:
             sim_results = sim_results.get("test_results", [])
             for item in sim_results:
                 if all(f in item for f in ["name", "file"]):
+                    if Path(item["file"]).is_symlink():
+                        item["file"] = str(Path(item["file"]).resolve().relative_to(self.repo_top))
                     tests_to_urls[item["name"]] = f"{self.source_url_prefix}/{item['file']}"
                     if "lineno" in item:
                         tests_to_urls[item["name"]] += f"#L{item['lineno']}"
