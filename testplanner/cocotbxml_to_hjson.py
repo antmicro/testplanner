@@ -40,6 +40,12 @@ def main():
         type=Path,
     )
     parser.add_argument(
+        "--tests-ignore-dirs",
+        help="Directories to ignore when searching for sources, relative to --tests-base-dir",
+        nargs="+",
+        type=Path,
+    )
+    parser.add_argument(
         "--testplans-base-dir",
         help="Base path for testplans",
         default=Path("."),
@@ -50,6 +56,7 @@ def main():
 
     test_root_dir = args.tests_base_dir if args.tests_base_dir else Path(".")
     testplan_root_dir = args.testplans_base_dir.resolve()
+    ignore_dirs = args.tests_ignore_dirs if args.tests_ignore_dirs else []
 
     test_names_to_entries = dict()
 
@@ -101,9 +108,17 @@ def main():
                     "total": tdata["total"],
                     "simulated_time": mean(tdata["simulated_time"]),
                     "job_runtime": mean(tdata["job_runtime"]),
-                    "file": str(Path(tdata["file"]).relative_to(test_root_dir)),
-                    "lineno": tdata["lineno"],
                 }
+                if "file" in tdata:
+                    parents = Path(tdata["file"]).relative_to(test_root_dir).parents
+                    ignore = False
+                    for idir in ignore_dirs:
+                        if idir in parents:
+                            ignore = True
+                            break
+                    if not ignore:
+                        tests_stats[test]["file"] = str(Path(tdata["file"]).relative_to(test_root_dir))
+                        tests_stats[test]["lineno"] = tdata["lineno"]
         out_hjson = {
             "timestamp": datetime.now().strftime("%D/%M/%Y %H:%M"),
             "test_results": [val for val in tests_stats.values()]
