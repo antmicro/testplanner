@@ -489,7 +489,7 @@ class Testplan:
             diagram_rel_path = os.path.relpath(
                 os.path.abspath(self.diagram_path), os.path.dirname(output.name)
             )
-            output.write(":::{figure-md} UVM-testbench-diagram\n")
+            output.write(f":::{{figure-md}} {self.name.lower().replace(' ', '-')}-testbench-diagram\n")
             output.write(f"![{self.name}]({diagram_rel_path})\n\n")
             output.write(f"{self.name} UVM testbench diagram with static and dynamic components\n")
             output.write(":::\n")
