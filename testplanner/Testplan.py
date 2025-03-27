@@ -515,7 +515,7 @@ class Testplan:
                 if not found:
                     print(f'Source file for testplan "{self.name}" not found ({self.filename})!')
 
-        tests_to_urls = dict()
+        tests_to_urls = {}
         if sim_results_path:
             sim_results = Testplan._parse_hjson(sim_results_path)
             sim_results = sim_results.get("test_results", [])
@@ -541,17 +541,13 @@ class Testplan:
                 if len(tp.tests) == 0:
                     output.write("No Tests Implemented")
                 elif len(tp.tests) == 1:
-                    test_name = f"`{tp.tests[0]}`"
-                    if tp.tests[0] in tests_to_urls:
-                        test_name = f"[{test_name}]({tests_to_urls[tp.tests[0]]})"
+                    test_name = self.find_test_file(tp.tests[0], tests_to_urls)
                     output.write(f"Test: {test_name}")
                 else:
                     output.write("Tests:\n")
                     for test in tp.tests:
-                        if test in tests_to_urls:
-                            output.write(f"- [{test}]({tests_to_urls[test]})\n")
-                        else:
-                            output.write(f"- `{test}`\n")
+                        test_name = self.find_test_file(test, tests_to_urls)
+                        output.write(f"- {test_name}\n")
 
                 output.write("\n\n" + tp.desc.strip() + "\n\n")
 
@@ -559,6 +555,23 @@ class Testplan:
             output.write("## Covergroups\n\n")
             for covergroup in self.covergroups:
                 output.write(f"### {covergroup.name}\n\n{covergroup.desc.strip()}\n\n")
+
+    def find_test_file(self, test_name, tests_to_urls):
+        if test_name in tests_to_urls:
+            return f"[{test_name}]({tests_to_urls[test_name]})"
+        if not self.source_file_map or "test_files" not in self.source_file_map:
+            return test_name
+        for testregex, testpath in self.source_file_map["test_files"].items():
+            m = re.match(testregex, test_name)
+            if m:
+                pathregex = re.sub(testregex, testpath, test_name)
+                candidatepaths = sorted(self.repo_top.resolve().glob(pathregex))
+                assert len(candidatepaths) <= 1, f"Multiple files assigned to test {test_name}:  {testregex} {candidatepaths}"
+                if len(candidatepaths) == 0:
+                    return test_name
+                relative_path = candidatepaths[0].relative_to(self.repo_top.resolve())
+                return f"[{test_name}]({self.source_url_prefix}/{relative_path})"
+        return test_name
 
     def map_test_results(self, test_results):
         """Map test results to testpoints."""
