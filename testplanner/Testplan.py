@@ -432,7 +432,7 @@ class Testplan:
                 )
                 sys.exit(1)
             parsed.add(testplan)
-            data = self._parse_hjson(os.path.join(repo_top, testplan))
+            data = self._parse_hjson(testplan)
             imported_testplans.extend(
                 self._get_imported_testplan_paths(
                     testplan, data.get("import_testplans", []), repo_top
