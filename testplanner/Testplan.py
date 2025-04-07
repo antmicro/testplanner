@@ -11,7 +11,7 @@ import re
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import TextIO
+from typing import TextIO, Optional
 
 import hjson
 import mistletoe
@@ -476,7 +476,7 @@ class Testplan:
         # Build regressions dict into a hjson like data structure
         return [{"name": ms, "tests": list(regressions[ms])} for ms in regressions]
 
-    def write_testplan_doc(self, output: TextIO, sim_results_path: Path = None, target_sim_results_path: Path = None) -> None:  # noqa: E501
+    def write_testplan_doc(self, output: TextIO, sim_results_path: Path = None, target_sim_results_path: Optional[Path] = None, target_sim_results_url_prefix: Optional[str] = None) -> None:  # noqa: E501
         """Write testplan documentation in markdown from the hjson testplan."""
 
         stages = {}
@@ -528,7 +528,8 @@ class Testplan:
                         tests_to_urls[item["name"]] += f"#L{item['lineno']}"
             # TODO (glatosinski): To fix Myst's link resolution, {.external} attribute is
             # added to link. This requires "inline_attrs" extension in myst_enable_extensions
-            output.write(f"[Test results](./{os.path.relpath(target_sim_results_path, Path(output.name).parent)}){{.external}}\n\n")
+            url_prefix = target_sim_results_url_prefix if target_sim_results_url_prefix else "./"
+            output.write(f"[Test results]({url_prefix}{os.path.relpath(target_sim_results_path, Path(output.name).parent)}){{.external}}\n\n")
 
         output.write("## Testpoints\n\n")
         for stage, testpoints in stages.items():

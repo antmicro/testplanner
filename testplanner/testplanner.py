@@ -128,6 +128,11 @@ def main():
         default="Tests' summary",
         type=str,
     )
+    parser.add_argument(
+        "--output-sim-results-prefix",
+        help="Prefix for tests' results to be used in testplan Markdown files",
+        type=str,
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug prints.")
 
     args = parser.parse_args()
@@ -210,7 +215,7 @@ def main():
         if output_testplan:
             output_path = output_testplan if output_testplan_single else Path(output_testplan) / f"{testplan_stem}.md"
             with open(output_path, "a" if output_testplan_single else "w") as f:
-                testplan_obj.write_testplan_doc(f, sim_result, output_sim_path)
+                testplan_obj.write_testplan_doc(f, sim_result, output_sim_path, args.output_sim_results_prefix)
                 f.write("\n")
 
         if args.output_summary:
