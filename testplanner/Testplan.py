@@ -11,11 +11,25 @@ import re
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import TextIO, Optional
+from typing import TextIO, Optional, Union
 
 import hjson
 import mistletoe
 from tabulate import tabulate
+
+
+def format_time(time: Optional[Union[float, str]]) -> str:
+    """Formats time provided in simulation results."""
+    if time is None:
+        return ""
+    if isinstance(time, float):
+        return f"{time:.3f}"
+    parsed_time = re.match(r"^(\d+\.?\d*)\s+(\w+)$", time)
+    if parsed_time:
+        time_val = float(parsed_time.group(1))
+        return f"{time_val:.3f} {parsed_time.group(2)}"
+    else:
+        return time
 
 
 class Result:
@@ -725,8 +739,8 @@ class Testplan:
                     continue
                 pass_rate = self._get_percentage(tr.passing, tr.total)
 
-                job_runtime = "" if tr.job_runtime is None else f"{tr.job_runtime:.5f}"
-                simulated_time = "" if tr.simulated_time is None else f"{tr.simulated_time:.5f}"
+                job_runtime = format_time(tr.job_runtime)
+                simulated_time = format_time(tr.simulated_time)
 
                 test_name = tr.name
                 if tr.file:
