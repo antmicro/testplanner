@@ -22,3 +22,14 @@ cocotbxml-to-hjson = "testplanner.cocotbxml_to_hjson:main"
 include = [
     "testplanner"
 ]
+
+[tool.ruff.lint]
+preview = true
+select = [
+    "I",      # enable isort
+    "E",      # PEP8 errors
+    "E261",   # At least two spaces before inline comment
+    "E225",   # Missing whitespace around operator
+    "F",      # PEP8 warnings
+    "RUF100", # disallowed unnecessary noqa
+]

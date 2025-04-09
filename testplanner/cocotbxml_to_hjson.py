@@ -1,12 +1,13 @@
+import argparse
+import logging
 import re
 import sys
-import hjson
-import logging
 import xml.etree.ElementTree as ET
-from statistics import mean
-import argparse
 from datetime import datetime
 from pathlib import Path
+from statistics import mean
+
+import hjson
 
 
 def main():
@@ -42,7 +43,7 @@ def main():
     )
     parser.add_argument(
         "--tests-ignore-dirs",
-        help="Directories to ignore when searching for sources, relative to --tests-base-dir",
+        help="Directories to ignore when searching for sources, relative to --tests-base-dir",  # noqa: E501
         nargs="+",
         type=Path,
     )
@@ -74,20 +75,30 @@ def main():
 
     for resultspath in args.input_xmls:
         root = ET.parse(resultspath).getroot()
-        for testcase in root.findall('.//testcase'):
+        for testcase in root.findall(".//testcase"):
             tname = testcase.attrib["name"]
-            if tname.startswith('test_'):
+            if tname.startswith("test_"):
                 tname = tname[5:]
             if matched := re.match(r"^(.+)_(\d+)$", tname):
                 tname = matched.group(1)
             if tname in test_names_to_entries:
-                logging.info(f"Test name '{tname}' reappears in test results in {resultspath}, previously in {test_names_to_entries[tname]['xmlpath'][-1]}")  # noqa: E501
-                test_names_to_entries[tname]["skipped"] += len(testcase.findall("skipped"))  # noqa: E501
-                test_names_to_entries[tname]["failure"] += len(testcase.findall("failure"))  # noqa: E501
+                logging.info(
+                    f"Test name '{tname}' reappears in test results in {resultspath}, previously in {test_names_to_entries[tname]['xmlpath'][-1]}"  # noqa: E501
+                )
+                test_names_to_entries[tname]["skipped"] += len(
+                    testcase.findall("skipped")
+                )
+                test_names_to_entries[tname]["failure"] += len(
+                    testcase.findall("failure")
+                )
                 test_names_to_entries[tname]["total"] += 1
                 test_names_to_entries[tname]["xmlpath"].append(resultspath)
-                test_names_to_entries[tname]["simulated_time"].append(float(testcase.attrib["sim_time_ns"]))
-                test_names_to_entries[tname]["job_runtime"].append(float(testcase.attrib["time"]))
+                test_names_to_entries[tname]["simulated_time"].append(
+                    float(testcase.attrib["sim_time_ns"])
+                )
+                test_names_to_entries[tname]["job_runtime"].append(
+                    float(testcase.attrib["time"])
+                )
             else:
                 entry = testcase.attrib
                 entry["skipped"] = len(testcase.findall("skipped"))
@@ -102,7 +113,7 @@ def main():
     for testplanpath in args.input_testplans:
         testplanpath = testplanpath.resolve()
         tests_stats = dict()
-        with open(testplanpath, 'r') as f:
+        with open(testplanpath, "r") as f:
             testplan = hjson.load(f)
         for testpoint in testplan["testpoints"]:
             for test in testpoint["tests"]:
@@ -127,13 +138,17 @@ def main():
                                 ignore = True
                                 break
                         if not ignore:
-                            tests_stats[test]["file"] = str(Path(tdata["file"]).relative_to(test_root_dir))
+                            tests_stats[test]["file"] = str(
+                                Path(tdata["file"]).relative_to(test_root_dir)
+                            )
                             tests_stats[test]["lineno"] = tdata["lineno"]
                     else:
-                        logging.warning(f'Path in XML test "{tdata["file"]}" is outside "{test_root_dir.resolve()}"')
+                        logging.warning(
+                            f'Path in XML test "{tdata["file"]}" is outside "{test_root_dir.resolve()}"'  # noqa: E501
+                        )
         out_hjson = {
             "timestamp": datetime.now().strftime("%D/%M/%Y %H:%M"),
-            "test_results": [val for val in tests_stats.values()]
+            "test_results": [val for val in tests_stats.values()],
         }
         out_path = args.output_dir / testplanpath.relative_to(testplan_root_dir)
         out_path.parent.mkdir(parents=True, exist_ok=True)

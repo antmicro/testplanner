@@ -3,15 +3,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-r"""Testpoint and Testplan classes for maintaining the testplan
-"""
+r"""Testpoint and Testplan classes for maintaining the testplan"""
 
 import os
 import re
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import TextIO, Optional, Union
+from typing import Optional, TextIO, Union
 
 import hjson
 import mistletoe
@@ -41,7 +40,16 @@ def format_time(time: Optional[Union[int, float, str]]) -> str:
 class Result:
     """The results for a single test"""
 
-    def __init__(self, name, passing=0, total=0, job_runtime=None, simulated_time=None, file=None, lineno=None):
+    def __init__(
+        self,
+        name,
+        passing=0,
+        total=0,
+        job_runtime=None,
+        simulated_time=None,
+        file=None,
+        lineno=None,
+    ):
         self.name = name
         self.passing = passing
         self.total = total
@@ -92,12 +100,14 @@ class Element:
     def __str__(self):
         # Reindent the multiline desc with 4 spaces.
         desc = "\n".join(["    " + line.lstrip() for line in self.desc.split("\n")])
-        return f"  {self.kind.capitalize()}: {self.name}\n" f"  Description:\n{desc}\n"
+        return f"  {self.kind.capitalize()}: {self.name}\n  Description:\n{desc}\n"
 
     def _validate(self):
         """Runs some basic consistency checks."""
         if not self.name:
-            raise ValueError(f"Error: {self.kind.capitalize()} name cannot " f"be empty:\n{self}")
+            raise ValueError(
+                f"Error: {self.kind.capitalize()} name cannot be empty:\n{self}"
+            )
 
         # "tags", if updated key must be list.
         if not isinstance(self.tags, list):
@@ -141,7 +151,7 @@ class Covergroup(Element):
         super()._validate()
         if not self.name.endswith("_cg"):
             raise ValueError(
-                f"Error: Covergroup name {self.name} needs to " 'end with suffix "_cg".'
+                f'Error: Covergroup name {self.name} needs to end with suffix "_cg".'
             )
 
 
@@ -156,7 +166,8 @@ class Testpoint(Element):
     - the list of actual developed tests that verify it
 
     TODO: Refactor stages to milestones
-    TODO: Expose milestones through configuration object so that users can define their milestones
+    TODO: Expose milestones through configuration object so that users can
+    define their milestones
     """
 
     kind = "testpoint"
@@ -181,7 +192,7 @@ class Testpoint(Element):
             self.not_mapped = True
 
     def __str__(self):
-        return super().__str__() + (f"  Stage: {self.stage}\n" f"  Tests: {self.tests}\n")
+        return super().__str__() + (f"  Stage: {self.stage}\n  Tests: {self.tests}\n")
 
     def _validate(self):
         super()._validate()
@@ -215,7 +226,9 @@ class Testpoint(Element):
             resolved = [test]
             for item, value in subst.items():
                 values = value if isinstance(value, list) else [value]
-                resolved = [t.replace(f"{{{item}}}", v) for t in resolved for v in values]
+                resolved = [
+                    t.replace(f"{{{item}}}", v) for t in resolved for v in values
+                ]
             resolved_tests.extend(resolved)
 
         self.tests = resolved_tests
@@ -293,7 +306,7 @@ class Testplan:
                 sys.exit(1)
 
             if item.name in item_names:
-                print(f"Error: Duplicate {kind} item found with name: " f"{item.name}")
+                print(f"Error: Duplicate {kind} item found with name: {item.name}")
                 sys.exit(1)
 
             # Filter out the item by tags if provided.
@@ -326,7 +339,15 @@ class Testplan:
         lines += [f"{c}" for c in self.covergroups]
         return "\n".join(lines)
 
-    def __init__(self, filename, repo_top=None, name=None, diagram_path=None, source_file_map=None, source_url_prefix=""):
+    def __init__(
+        self,
+        filename,
+        repo_top=None,
+        name=None,
+        diagram_path=None,
+        source_file_map=None,
+        source_url_prefix="",
+    ):
         """Initialize the testplan.
 
         filename is the HJson file that captures the testplan. It may be
@@ -416,7 +437,7 @@ class Testplan:
                 continue
 
             raise FileNotFoundError(
-                f"Testplan {testplan} imported by " f"{parent_testplan} does not exist."
+                f"Testplan {testplan} imported by {parent_testplan} does not exist."
             )
 
         return result
@@ -466,7 +487,9 @@ class Testplan:
         self.testpoints = self._create_testplan_elements("testpoint", testpoints, tags)
 
         covergroups = obj.get("covergroups", [])
-        self.covergroups = self._create_testplan_elements("covergroup", covergroups, set())
+        self.covergroups = self._create_testplan_elements(
+            "covergroup", covergroups, set()
+        )
 
         if not testpoints and not covergroups:
             print(f"Error: No testpoints or covergroups found in {filename}")
@@ -496,9 +519,14 @@ class Testplan:
         # Build regressions dict into a hjson like data structure
         return [{"name": ms, "tests": list(regressions[ms])} for ms in regressions]
 
-    def write_testplan_doc(self, output: TextIO, sim_results_path: Path = None, target_sim_results_path: Optional[Path] = None, target_sim_results_url_prefix: Optional[str] = None) -> None:  # noqa: E501
+    def write_testplan_doc(
+        self,
+        output: TextIO,
+        sim_results_path: Path = None,
+        target_sim_results_path: Optional[Path] = None,
+        target_sim_results_url_prefix: Optional[str] = None,
+    ) -> None:
         """Write testplan documentation in markdown from the hjson testplan."""
-
         stages = {}
         for tp in self.testpoints:
             stages.setdefault(tp.stage, list()).append(tp)
@@ -507,14 +535,18 @@ class Testplan:
 
         if self.diagram_path:
             diagram_rel_path = os.path.relpath(
-                os.path.abspath(self.diagram_path), os.path.dirname(output.name)
+                os.path.abspath(self.diagram_path),
+                os.path.dirname(output.name),
             )
-            output.write(f":::{{figure-md}} {self.name.lower().replace(' ', '-')}-testbench-diagram\n")
+            output.write(
+                f":::{{figure-md}} {self.name.lower().replace(' ', '-')}-testbench-diagram\n"  # noqa: E501
+            )
             output.write(f"![{self.name}]({diagram_rel_path})\n\n")
-            output.write(f"{self.name} UVM testbench diagram with static and dynamic components\n")
+            output.write(
+                f"{self.name} UVM testbench diagram with static and dynamic components\n"  # noqa: E501
+            )
             output.write(":::\n")
 
-        src_rel_path = os.path.relpath(os.path.dirname(self.filename), os.path.dirname(output.name))
         if self.source_file_map is not None and "testplans" in self.source_file_map:
             found = False
             for entry in self.source_file_map["testplans"]:
@@ -522,18 +554,26 @@ class Testplan:
                 if not re.match(srcregex, self.name):
                     continue
                 for template in templates:
-                    pathcandidate = template.format(name=self.name, testplanpath=self.filename)
+                    pathcandidate = template.format(
+                        name=self.name, testplanpath=self.filename
+                    )
                     full_path = self.repo_top.resolve() / pathcandidate
                     if not full_path.exists():
-                        pathcandidate = template.format(name=self.name.lower(), testplanpath=self.filename)
+                        pathcandidate = template.format(
+                            name=self.name.lower(), testplanpath=self.filename
+                        )
                         full_path = self.repo_top.resolve() / pathcandidate
                         if not full_path.exists():
                             continue
-                    output.write(f"[Source file]({self.source_url_prefix}/{pathcandidate})\n\n")
+                    output.write(
+                        f"[Source file]({self.source_url_prefix}/{pathcandidate})\n\n"
+                    )
                     found = True
                     break
                 if not found:
-                    print(f'Source file for testplan "{self.name}" not found ({self.filename})!')
+                    print(
+                        f'Source file for testplan "{self.name}" not found ({self.filename})!'  # noqa: E501
+                    )
 
         tests_to_urls = {}
         if sim_results_path:
@@ -542,14 +582,23 @@ class Testplan:
             for item in sim_results:
                 if all(f in item for f in ["name", "file"]):
                     if Path(item["file"]).is_symlink():
-                        item["file"] = str(Path(item["file"]).resolve().relative_to(self.repo_top))
-                    tests_to_urls[item["name"]] = f"{self.source_url_prefix}/{item['file']}"
+                        item["file"] = str(
+                            Path(item["file"]).resolve().relative_to(self.repo_top)
+                        )
+                    tests_to_urls[item["name"]] = (
+                        f"{self.source_url_prefix}/{item['file']}"
+                    )
                     if "lineno" in item:
                         tests_to_urls[item["name"]] += f"#L{item['lineno']}"
-            # TODO (glatosinski): To fix Myst's link resolution, {.external} attribute is
-            # added to link. This requires "inline_attrs" extension in myst_enable_extensions
-            url_prefix = target_sim_results_url_prefix if target_sim_results_url_prefix else "./"
-            output.write(f"[Test results]({url_prefix}{os.path.relpath(target_sim_results_path, Path(output.name).parent)}){{.external}}\n\n")
+            # TODO (glatosinski): To fix Myst's link resolution, {.external}
+            # attribute is added to link. This requires "inline_attrs"
+            # extension in myst_enable_extensions
+            url_prefix = (
+                target_sim_results_url_prefix if target_sim_results_url_prefix else "./"
+            )
+            output.write(
+                f"[Test results]({url_prefix}{os.path.relpath(target_sim_results_path, Path(output.name).parent)}){{.external}}\n\n"  # noqa: E501
+            )
 
         output.write("## Testpoints\n\n")
         for stage, testpoints in stages.items():
@@ -587,7 +636,9 @@ class Testplan:
             if m:
                 pathregex = re.sub(testregex, testpath, test_name)
                 candidatepaths = sorted(self.repo_top.resolve().glob(pathregex))
-                assert len(candidatepaths) <= 1, f"Multiple files assigned to test {test_name}:  {testregex} {candidatepaths}"
+                assert len(candidatepaths) <= 1, (
+                    f"Multiple files assigned to test {test_name}:  {testregex} {candidatepaths}"  # noqa: E501
+                )
                 if len(candidatepaths) == 0:
                     return test_name
                 relative_path = candidatepaths[0].relative_to(self.repo_top.resolve())
@@ -695,7 +746,6 @@ class Testplan:
         cgs_found is a list of covergroup names extracted from the coverage
         database after the simulation is run with coverage enabled.
         """
-
         if not self.covergroups:
             return
 
@@ -715,7 +765,6 @@ class Testplan:
 
     def get_test_results_table(self, map_full_testplan=True):
         """Return the mapped test results into a markdown table."""
-
         assert self.test_results_mapped, "Have you invoked map_test_results()?"
         header = [
             "Name",
@@ -752,15 +801,17 @@ class Testplan:
                 if tr.file:
                     if Path(tr.file).exists():
                         if Path(tr.file).is_symlink():
-                            tr.file = str(Path(tr.file).resolve().relative_to(self.repo_top))
+                            tr.file = str(
+                                Path(tr.file).resolve().relative_to(self.repo_top)
+                            )
                     test_name = f"[{tr.name}]({self.source_url_prefix}/{tr.file}"
                     if tr.lineno is not None:
                         test_name += f"#L{tr.lineno})"
                     else:
                         test_name += ")"
                 table.append(
-                    ([stage] if not skip_stages else []) +
-                    [
+                    ([stage] if not skip_stages else [])
+                    + [
                         tp_name,
                         test_name,
                         job_runtime,
@@ -780,7 +831,6 @@ class Testplan:
 
     def get_progress_table(self):
         """Returns the current progress of the effort towards the testplan."""
-
         assert self.test_results_mapped, "Have you invoked map_test_results()?"
         header = []
         table = []
@@ -792,8 +842,12 @@ class Testplan:
             stat = self.progress[key]
             values = [v for v in stat.values()]
             if not header:
-                header = ([] if skip_stage else ["Stage"]) + [k.capitalize() for k in stat]
-            table.append(([] if skip_stage else [key if key != "N.A." else ""]) + values)
+                header = ([] if skip_stage else ["Stage"]) + [
+                    k.capitalize() for k in stat
+                ]
+            table.append(
+                ([] if skip_stage else [key if key != "N.A." else ""]) + values
+            )
 
         text = "\n### Testplan Progress\n"
         colalign = ("center",) * len(header)
@@ -808,7 +862,6 @@ class Testplan:
         cov_results is a list of dicts with name and result keys, representing
         the name of the coverage metric and the result in decimal / fp value.
         """
-
         if not cov_results:
             return ""
 
@@ -821,7 +874,12 @@ class Testplan:
 
         colalign = ("center",) * len(cov_header)
         text = "\n### Coverage Results\n"
-        text += tabulate([cov_values], headers=cov_header, tablefmt="pipe", colalign=colalign)
+        text += tabulate(
+            [cov_values],
+            headers=cov_header,
+            tablefmt="pipe",
+            colalign=colalign,
+        )
         text += "\n"
         return text
 
@@ -859,7 +917,15 @@ class Testplan:
         test_results = []
         for item in test_results_:
             try:
-                tr = Result(item["name"], item["passing"], item["total"], simulated_time=item.get("simulated_time", None), job_runtime=item.get("job_runtime", None), file=item.get("file", None), lineno=item.get("lineno", None))
+                tr = Result(
+                    item["name"],
+                    item["passing"],
+                    item["total"],
+                    simulated_time=item.get("simulated_time", None),
+                    job_runtime=item.get("job_runtime", None),
+                    file=item.get("file", None),
+                    lineno=item.get("lineno", None),
+                )
                 test_results.append(tr)
             except KeyError as e:
                 print(f"Error: data in {sim_results_file} is malformed!\n{e}")
@@ -886,9 +952,13 @@ class Testplan:
             text = text.replace("<table>", '<table class="dv">')
         return text
 
-    def get_testplan_summary(self, summary_output_path: Path, sim_results_file: Path, target_sim_results_path: Path):  # noqa: E501
-        """
-        Provides a summary for testplan results.
+    def get_testplan_summary(
+        self,
+        summary_output_path: Path,
+        sim_results_file: Path,
+        target_sim_results_path: Path,
+    ):
+        """Provides a summary for testplan results.
 
         Provides an array with an URL to simulation results, passing tests,
         total number of tests, and percentage of succeeding tests.
@@ -904,7 +974,7 @@ class Testplan:
             f"[{self.name}]({os.path.relpath(target_sim_results_path, summary_output_path.parent)})",  # noqa: E501
             passing,
             total,
-            self._get_percentage(passing, total)
+            self._get_percentage(passing, total),
         ]
 
 
@@ -944,7 +1014,9 @@ def _merge_dicts(list1, list2, use_list1_for_defaults=True):
         # Oh no! We can't merge this.
         print(
             "ERROR: Cannot merge dictionaries at key {!r} because items "
-            "have conflicting types ({} in 1st; {} in 2nd).".format(key, type(item1), type(item2))
+            "have conflicting types ({} in 1st; {} in 2nd).".format(
+                key, type(item1), type(item2)
+            )
         )
         sys.exit(1)
 

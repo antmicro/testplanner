@@ -10,6 +10,12 @@ variables:
   apt-get -qqy --no-install-recommends install ca-certificates python3 python3-pip git
   rm /usr/lib/python3.11/EXTERNALLY-MANAGED
 
+lint:
+  script:
+    - *install_deps
+    - pip3 install ruff pre-commit
+    - pre-commit run --all-files || (echo "pre-commit changes:" && git diff && false)
+
 basic_test:
   script:
     - *install_deps

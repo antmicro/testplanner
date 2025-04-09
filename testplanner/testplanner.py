@@ -3,17 +3,17 @@
 # Copyright (c) 2025 Antmicro <www.antmicro.com>
 #
 # SPDX-License-Identifier: Apache-2.0
-r"""Command-line tool to parse and process testplan Hjson
+r"""Command-line tool to parse and process testplan Hjson"""
 
-"""
-import yaml
 import argparse
 import logging
 import os
 import sys
 from pathlib import Path
 from shutil import copy2
+
 import mistletoe
+import yaml
 from tabulate import tabulate
 
 from testplanner.Testplan import Testplan
@@ -36,8 +36,7 @@ def prepare_output_paths(output_path):
 
 
 def main():
-    """
-    Supported calls:
+    """Supported calls:
     * Pass a list of testplans (at least 1) without simulation results:
         testplanner.py <testplan_0> ... <testplan_N>
                        -o <output_dir>
@@ -61,7 +60,8 @@ def main():
     You should always set the <output_dir> explicitly.
     """
     parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "testplans",
@@ -86,14 +86,14 @@ def main():
     parser.add_argument(
         "-ot",
         "--output-testplan",
-        help="Path to output directory for multiple files's output, path to file for single-file output",
+        help="Path to output directory for multiple files's output, path to file for single-file output",  # noqa: E501
         type=Path,
         required=not any([flag in sys.argv for flag in ["--sim-results", "-s"]]),
     )
     parser.add_argument(
         "-os",
         "--output-sim-results",
-        help="Path to output directory for multiple files's output, path to file for single-file output",
+        help="Path to output directory for multiple files's output, path to file for single-file output",  # noqa: E501
         type=Path,
         required=any([flag in sys.argv for flag in ["--sim-results", "-s"]]),
     )
@@ -133,7 +133,9 @@ def main():
         help="Prefix for tests' results to be used in testplan Markdown files",
         type=str,
     )
-    parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug prints.")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable debug prints."
+    )
 
     args = parser.parse_args()
 
@@ -149,7 +151,9 @@ def main():
     logging.debug("Args:")
     output_testplan = args.output_testplan.resolve() if args.output_testplan else None
     output_testplan_single = prepare_output_paths(output_testplan)
-    output_sim_results = args.output_sim_results.resolve() if args.output_sim_results else None
+    output_sim_results = (
+        args.output_sim_results.resolve() if args.output_sim_results else None
+    )
     output_sim_results_single = prepare_output_paths(output_sim_results)
 
     testplans = [Path(os.path.abspath(s)) for s in args.testplans]
@@ -159,7 +163,7 @@ def main():
         sim_results = [Path(os.path.abspath(s)) for s in args.sim_results]
         if len(sim_results) != len(testplans):
             raise ValueError(
-                "Incorrect number of arguments. Lengths of testplans and sim_results should be equal."
+                "Incorrect number of arguments. Lengths of testplans and sim_results should be equal."  # noqa: E501
             )
         logging.debug(f"sim_results = {sim_results}")
     else:
@@ -210,21 +214,38 @@ def main():
 
         if output_sim_results:
             sim_result = sim_results[id]
-            output_sim_path = output_sim_results if output_sim_results_single else Path(output_sim_results) / f"{testplan_stem}.{format}"
+            output_sim_path = (
+                output_sim_results
+                if output_sim_results_single
+                else Path(output_sim_results) / f"{testplan_stem}.{format}"
+            )
 
         if output_testplan:
-            output_path = output_testplan if output_testplan_single else Path(output_testplan) / f"{testplan_stem}.md"
+            output_path = (
+                output_testplan
+                if output_testplan_single
+                else Path(output_testplan) / f"{testplan_stem}.md"
+            )
             with open(output_path, "a" if output_testplan_single else "w") as f:
-                testplan_obj.write_testplan_doc(f, sim_result, output_sim_path, args.output_sim_results_prefix)
+                testplan_obj.write_testplan_doc(
+                    f,
+                    sim_result,
+                    output_sim_path,
+                    args.output_sim_results_prefix,
+                )
                 f.write("\n")
 
         if args.output_summary:
-            tests_summary.append(testplan_obj.get_testplan_summary(args.output_summary, sim_result, output_sim_path))
+            tests_summary.append(
+                testplan_obj.get_testplan_summary(
+                    args.output_summary, sim_result, output_sim_path
+                )
+            )
 
         if output_sim_results:
             with open(output_sim_path, "a" if output_sim_results_single else "w") as f:
                 f.write(testplan_obj.get_sim_results(sim_result, fmt=format))
-                f.write('\n')
+                f.write("\n")
             copy2(STYLES_DIR / "main.css", output_sim_path.parent)
             copy2(STYLES_DIR / "cov.css", output_sim_path.parent)
 
@@ -232,9 +253,11 @@ def main():
         header = ["Name", "Passing", "Total", "Pass Rate"]
         colalign = ["center", "right", "right", "right"]
         summary = f"# {args.output_summary_title}\n\n"
-        summary += tabulate(tests_summary, headers=header, tablefmt="pipe", colalign=colalign)
+        summary += tabulate(
+            tests_summary, headers=header, tablefmt="pipe", colalign=colalign
+        )
         summary += "\n"
-        with args.output_summary.open('w') as f:
+        with args.output_summary.open("w") as f:
             if args.output_summary.suffix == ".html":
                 result = Testplan.get_dv_style_css()
                 result += mistletoe.markdown(summary)
