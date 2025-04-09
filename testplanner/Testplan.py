@@ -18,16 +18,22 @@ import mistletoe
 from tabulate import tabulate
 
 
-def format_time(time: Optional[Union[float, str]]) -> str:
+def format_time(time: Optional[Union[int, float, str]]) -> str:
     """Formats time provided in simulation results."""
     if time is None:
         return ""
+    if isinstance(time, int):
+        return str(time)
     if isinstance(time, float):
         return f"{time:.3f}"
     parsed_time = re.match(r"^(\d+\.?\d*)\s+(\w+)$", time)
     if parsed_time:
         time_val = float(parsed_time.group(1))
-        return f"{time_val:.3f} {parsed_time.group(2)}"
+        if time_val.is_integer():
+            time_val = str(int(time_val))
+        else:
+            time_val = f"{time_val:.3f}"
+        return f"{time_val} {parsed_time.group(2)}"
     else:
         return time
 
