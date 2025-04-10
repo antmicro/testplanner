@@ -382,6 +382,7 @@ class Testplan:
 
         if not self.name:
             print("Error: the testplan 'name' is not set!")
+            print(self.filename)
             sys.exit(1)
 
         # Represents current progress towards each stage. Stage = N.A.
@@ -518,6 +519,18 @@ class Testplan:
 
         # Build regressions dict into a hjson like data structure
         return [{"name": ms, "tests": list(regressions[ms])} for ms in regressions]
+
+    def create_testplan_worksheet(self, xls):
+        xls.create_or_select_sheet(self.name)
+        stages = {}
+        for tp in self.testpoints[::-1]:
+            stages.setdefault(tp.stage, list()).append(tp)
+        for stage, testpoints in stages.items():
+            for tp in testpoints:
+                intent, stim, check, desc = xls.parse_standard_description(tp.desc)
+                xls.testplan_add_entry(tp.name, stage, intent, stim, check, desc)
+        xls.format_string_columns()
+        xls.save()
 
     def write_testplan_doc(
         self,

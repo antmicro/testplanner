@@ -33,3 +33,8 @@ select = [
     "F",      # PEP8 warnings
     "RUF100", # disallowed unnecessary noqa
 ]
+
+[project.optional-dependencies]
+xls = [
+    "openpyxl"
+]

@@ -91,6 +91,16 @@ def main():
         required=not any([flag in sys.argv for flag in ["--sim-results", "-s"]]),
     )
     parser.add_argument(
+        "--testplan-spreadsheet",
+        help="Generate testplan document as an XLSX file based on included template",
+        type=Path,
+    )
+    parser.add_argument(
+        "--testplan-spreadsheet-template",
+        help="Path to template XLSX file that should be used to generate spreadsheet with testplan",  # noqa: E501
+        type=Path,
+    )
+    parser.add_argument(
         "-os",
         "--output-sim-results",
         help="Path to output directory for multiple files's output, path to file for single-file output",  # noqa: E501
@@ -187,6 +197,18 @@ def main():
 
     tests_summary = []
 
+    if args.testplan_spreadsheet:
+        from shutil import copyfile
+
+        from testplanner.xls import XLSX_writer
+
+        template_path = Path(__file__).parent / "testplan-tpl.xlsx"
+        if args.testplan_spreadsheet_template:
+            template_path = args.testplan_spreadsheet_template
+
+        copyfile(template_path, args.testplan_spreadsheet)
+        xls = XLSX_writer(args.testplan_spreadsheet)
+
     # Process testplans
     for id, testplan in enumerate(testplans):
         logging.debug("Processing:")
@@ -221,6 +243,8 @@ def main():
             )
 
         if output_testplan:
+            if args.testplan_spreadsheet:
+                testplan_obj.create_testplan_worksheet(xls)
             output_path = (
                 output_testplan
                 if output_testplan_single
