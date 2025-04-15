@@ -10,15 +10,16 @@ import logging
 import os
 import sys
 from pathlib import Path
-from shutil import copy2
+from shutil import copy2, copytree
 
-import mistletoe
+import git
 import yaml
 from tabulate import tabulate
 
 from testplanner.Testplan import Testplan
 
 STYLES_DIR = Path(Path(__file__).parent.resolve() / "template")
+ASSETS_DIR = Path(Path(__file__).parent.resolve() / "template/assets")
 
 
 def prepare_output_paths(output_path):
@@ -268,7 +269,10 @@ def main():
         if args.output_summary:
             tests_summary.append(
                 testplan_obj.get_testplan_summary(
-                    args.output_summary, sim_result, output_sim_path
+                    args.output_summary,
+                    sim_result,
+                    output_sim_path,
+                    html_links=args.output_summary.suffix == ".html",
                 )
             )
 
@@ -276,33 +280,53 @@ def main():
             with open(output_sim_path, "a" if output_sim_results_single else "w") as f:
                 relative_url = None
                 if args.output_summary:
-                    relative_url = os.path.relpath(
-                        args.output_summary.parent, start=output_sim_path.parent
+                    relative_url = os.path.join(
+                        os.path.relpath(
+                            args.output_summary.parent, start=output_sim_path.parent
+                        ),
+                        args.output_summary.name,
                     )
-                f.write(
-                    testplan_obj.get_sim_results(sim_result, relative_url, fmt=format)
-                )
-                f.write("\n")
+                    f.write(
+                        testplan_obj.get_sim_results(
+                            sim_result, relative_url, repo_root, fmt=format
+                        )
+                    )
+                    f.write("\n")
             copy2(STYLES_DIR / "main.css", output_sim_path.parent)
             copy2(STYLES_DIR / "cov.css", output_sim_path.parent)
+            copytree(ASSETS_DIR, output_sim_path.parent / "assets", dirs_exist_ok=True)
         if output_sim_results and args.testplan_spreadsheet:
             testplan_obj.generate_xls_sim_results(xls)
 
     if args.output_summary:
         header = ["Name", "Passing", "Total", "Pass Rate"]
         colalign = ["center", "right", "right", "right"]
-        summary = f"# {args.output_summary_title}\n\n"
+        if args.output_summary.suffix == ".html":
+            sum_title = f"<h3> {args.output_summary_title}\n </h3>\n"
+            summary = ""
+            tablefmt = "unsafehtml"
+        else:
+            summary = f"# {args.output_summary_title}\n\n"
+            tablefmt = "pipe"
         summary += tabulate(
-            tests_summary, headers=header, tablefmt="pipe", colalign=colalign
+            tests_summary, headers=header, tablefmt=tablefmt, colalign=colalign
         )
         summary += "\n"
         with args.output_summary.open("w") as f:
             if args.output_summary.suffix == ".html":
-                result = Testplan.get_dv_style_css()
-                result += mistletoe.markdown(summary)
-                result = f"<center>\n{result}\n</center>"
-                result = result.replace("<table>", '<table class="dv">')
-                f.write(result)
+                data = {
+                    "title": sum_title,
+                    "test_results_table": summary,
+                }
+                if args.project_root:
+                    repo = git.Repo(args.project_root)
+                    data["git_sha"] = repo.head.commit.hexsha[:8]
+                    try:
+                        data["git_branch"] = repo.active_branch.name
+                    except TypeError:
+                        data["git_branch"] = "Detached HEAD"
+                    data["git_repo"] = repo.working_tree_dir.split("/")[-1]
+                f.write(Testplan.render_template(data))
             else:
                 f.write(summary)
 

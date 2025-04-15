@@ -5,9 +5,12 @@ description = "Initial testbench autogeneration tool"
 readme = "README.md"
 dependencies = [
     "hjson",
+    "Jinja2",
     "mistletoe",
-    "tabulate",
     "pyyaml",
+    "tabulate",
+    "GitPython",
+    "bs4"
 ]
 
 [build-system]

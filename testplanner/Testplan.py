@@ -9,12 +9,16 @@ import os
 import re
 import sys
 from collections import defaultdict
+from importlib.resources import path
 from pathlib import Path
 from typing import Optional, TextIO, Union
 
+import git
 import hjson
-import mistletoe
+from jinja2 import Template
 from tabulate import tabulate
+
+import testplanner.template as html_templates
 
 
 def format_time(time: Optional[Union[int, float, str]]) -> str:
@@ -844,7 +848,7 @@ class Testplan:
             "progress": self._get_percentage(written, total),
         }
 
-    def get_test_results_table(self, map_full_testplan=True):
+    def get_test_results_table(self, map_full_testplan=True, format="pipe"):
         """Return the mapped test results into a markdown table."""
         assert self.test_results_mapped, "Have you invoked map_test_results()?"
         header = [
@@ -885,11 +889,19 @@ class Testplan:
                             tr.file = str(
                                 Path(tr.file).resolve().relative_to(self.repo_top)
                             )
-                    test_name = f"[{tr.name}]({self.source_url_prefix}/{tr.file}"
-                    if tr.lineno is not None:
-                        test_name += f"#L{tr.lineno})"
+                    if "html" in format:
+                        file_fmt = tr.file
+                        if tr.lineno is not None:
+                            file_fmt += f"#L{tr.lineno})"
+                        test_name = (
+                            f"<a href={self.source_url_prefix}/{tr.file}>{tr.name}</a>"
+                        )
                     else:
-                        test_name += ")"
+                        test_name = f"[{tr.name}]({self.source_url_prefix}/{tr.file}"
+                        if tr.lineno is not None:
+                            test_name += f"#L{tr.lineno})"
+                        else:
+                            test_name += ")"
                 table.append(
                     ([stage] if not skip_stages else [])
                     + [
@@ -905,12 +917,15 @@ class Testplan:
                 stage = ""
                 tp_name = ""
 
-        text = "\n### Test Results\n"
-        text += tabulate(table, headers=header, tablefmt="pipe", colalign=colalign)
+        if "html" in format:
+            text = "\n<h3> Test Results\n </h3>"
+        else:
+            text = "\n### Test Results\n"
+        text += tabulate(table, headers=header, tablefmt=format, colalign=colalign)
         text += "\n"
         return text
 
-    def get_progress_table(self):
+    def get_progress_table(self, format="pipe"):
         """Returns the current progress of the effort towards the testplan."""
         assert self.test_results_mapped, "Have you invoked map_test_results()?"
         header = []
@@ -930,9 +945,12 @@ class Testplan:
                 ([] if skip_stage else [key if key != "N.A." else ""]) + values
             )
 
-        text = "\n### Testplan Progress\n"
+        if "html" in format:
+            text = "\n<h3> Testplan Progress\n </h3>"
+        else:
+            text = "\n### Testplan Progress\n"
         colalign = ("center",) * len(header)
-        text += tabulate(table, headers=header, tablefmt="pipe", colalign=colalign)
+        text += tabulate(table, headers=header, tablefmt=format, colalign=colalign)
         text += "\n"
         return text
 
@@ -984,7 +1002,11 @@ class Testplan:
         return result
 
     def get_sim_results(
-        self, sim_results_file, summary_output_path: Union[Path, None] = None, fmt="md"
+        self,
+        sim_results_file,
+        summary_output_path: Union[Path, None] = None,
+        repo_path: Union[Path, None] = None,
+        fmt="md",
     ):
         """Returns the mapped sim result tables in HTML formatted text.
 
@@ -1016,13 +1038,71 @@ class Testplan:
 
         self.map_test_results(test_results)
         self.map_covergroups(sim_results.get("covergroups", []))
+        self.timestamp = sim_results["timestamp"]
+        self.cov_results = sim_results.get("cov_results", [])
 
-        text = "# Simulation Results\n"
-        text += "## Run on {}\n".format(sim_results["timestamp"])
+        if fmt == "html":
+            return self.sim_results_html(summary_output_path, repo_path)
+        else:
+            return self.sim_results_markdown(summary_output_path)
+
+    @staticmethod
+    def render_template(data):
+        with path(html_templates, "testplan_simulations.html") as resourcetemplatefile:
+            with open(resourcetemplatefile, "r") as f:
+                resourcetemplate = f.read()
+        tm = Template(resourcetemplate)
+        content = tm.render(data)
+        return content
+
+    def sim_results_html(
+        self,
+        summary_output_path,
+        repo_path: Union[Path, None] = None,
+    ):
         if summary_output_path:
-            text += (
-                f"[<- back to summary]({summary_output_path}/testplan-summary.html)\n\n"
-            )
+            summary_url = summary_output_path
+        else:
+            summary_url = ""
+        nosuffix_filename = os.path.basename(self.filename).split(".")[0]
+        doc_url = ""
+        if self.source_file_map and "docs_files" in self.source_file_map:
+            # normalize the / at the end of the prefix
+            prefix = self.docs_url_prefix
+            if self.docs_url_prefix.endswith("/"):
+                prefix = self.docs_url_prefix.removesuffix("/")
+            if self.source_file_map["docs_files"][nosuffix_filename] != "":
+                doc_url = (
+                    f"{prefix}/{self.source_file_map['docs_files'][nosuffix_filename]}"
+                )
+
+        data = {
+            "timestamp": self.timestamp,
+            "title": self.name,
+            "test_results_table": self.get_test_results_table(format="unsafehtml"),
+            "progress_table": self.get_progress_table(format="unsafehtml"),
+            # This was always empty thus far, leaving it here but it's not
+            # templated in any way
+            "cov_results": Testplan.get_cov_results_table(self.cov_results),
+            "summary_url": summary_url,
+            "documentation_url": doc_url,
+        }
+        if repo_path:
+            repo = git.Repo(repo_path)
+            data["git_sha"] = repo.head.commit.hexsha[:8]
+            try:
+                data["git_branch"] = repo.active_branch.name
+            except TypeError:
+                data["git_branch"] = "Detached HEAD"
+            data["git_repo"] = repo.working_tree_dir.split("/")[-1]
+
+        return Testplan.render_template(data)
+
+    def sim_results_markdown(self, summary_output_path):
+        text = "# Simulation Results\n"
+        text += "## Run on {}\n".format(self.timestamp)
+        if summary_output_path:
+            text += f"[<- back to summary]({summary_output_path})"
         nosuffix_filename = os.path.basename(self.filename).split(".")[0]
         if self.source_file_map and "docs_files" in self.source_file_map:
             # normalize the / at the end of the prefix
@@ -1034,17 +1114,7 @@ class Testplan:
         text += self.get_test_results_table()
         text += self.get_progress_table()
 
-        cov_results = sim_results.get("cov_results", [])
-        text += Testplan.get_cov_results_table(cov_results)
-
-        if fmt == "html":
-            text = self.get_dv_style_css() + mistletoe.markdown(text)
-            text = f"""
-<center>
-{text}
-</center>
-            """
-            text = text.replace("<table>", '<table class="dv">')
+        text += Testplan.get_cov_results_table(self.cov_results)
         return text
 
     def get_testplan_summary(
@@ -1052,6 +1122,7 @@ class Testplan:
         summary_output_path: Path,
         sim_results_file: Path,
         target_sim_results_path: Path,
+        html_links: bool = False,
     ):
         """Provides a summary for testplan results.
 
@@ -1068,8 +1139,15 @@ class Testplan:
         for item in test_results_:
             total += item.get("total", 0)
             passing += item.get("passing", 0)
+        if html_links:
+            link = f"<a href='{os.path.join(path_rel, target_sim_results_path.name)}'>{self.name}</a>"  # noqa: E501
+        else:
+            link = (
+                f"[{self.name}]({os.path.join(path_rel, target_sim_results_path.name)})"
+            )
+
         return [
-            f"[{self.name}]({os.path.join(path_rel, target_sim_results_path.name)})",
+            link,
             passing,
             total,
             self._get_percentage(passing, total),
