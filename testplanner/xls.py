@@ -2,6 +2,9 @@ import re
 from typing import Tuple, Union
 
 from openpyxl import load_workbook
+from openpyxl.cell.rich_text import CellRichText, TextBlock
+from openpyxl.cell.text import InlineFont
+from openpyxl.utils import column_index_from_string
 from openpyxl.worksheet.worksheet import Worksheet
 
 
@@ -47,6 +50,11 @@ class XLSX_writer:
         self.wb.save(self.fp)
 
     def create_or_select_sheet(self, name: str | None):
+        """
+        Creates a sheet from the template sheet and selects it as the active
+        sheet. If a sheet with the specified name exists, it will be selected
+        as active but not overwritten.
+        """
         if name is None:
             raise RuntimeError("Cannot create an unnamed worksheet")
         if name in self.wb:
@@ -91,6 +99,9 @@ class XLSX_writer:
         check: str = "",
         comment: str = "",
     ):
+        """
+        Adds an entry at 'self.tpl_entry_idx' containing passed data points
+        """
         if self.active_worksheet is not None:
             self.active_worksheet.insert_rows(self.tpl_entry_idx)
             self.active_worksheet[
@@ -114,12 +125,52 @@ class XLSX_writer:
         else:
             raise RuntimeError("No worksheet was selected to be active")
 
+    def testplan_append_to_entry_col(
+        self, col: str, content: str, entry_key: str, entry_key_col: str = "name"
+    ):
+        """
+        Finds a row by 'entry_key' in column 'entry_key_col' and within that row,
+        puts 'content' str into the 'col' column
+        """
+        assert col in self.xls_column_map.keys()
+        found = False
+        for row in list(self.active_worksheet.rows)[self.tpl_entry_idx - 1 :]:
+            if (
+                row[
+                    column_index_from_string(self.xls_column_map[entry_key_col]) - 1
+                ].value
+                == entry_key
+            ):
+                row[
+                    column_index_from_string(self.xls_column_map[col]) - 1
+                ].value = content
+                found = True
+        assert found, f"row for {entry_key} was not found!"
+
+    def embolden_line(self, txt: str, lineno: int = 0):
+        """
+        Emboldens a selected line from a string and returns
+        a rich-text variant of that string
+        """
+        txt_split = txt.split("\n")
+        emboldened = CellRichText(
+            "\n".join(txt_split[:lineno]),
+            TextBlock(InlineFont(b=True), txt_split[lineno] + "\n"),
+            "\n".join(txt_split[lineno + 1 :]),
+        )
+        return emboldened
+
     def format_string_columns(self):
+        """
+        Iterates through columns in need for formatting due to
+        content length and calculates an acceptable width for them
+        """
         columns_to_format = [
             self.xls_column_map["intent"],
             self.xls_column_map["comments"],
             self.xls_column_map["stimulus_procedure"],
             self.xls_column_map["checking_mechanism"],
+            self.xls_column_map["status"],
         ]
         for column in self.active_worksheet.columns:
             if column[self.tpl_entry_idx - 1].column_letter in columns_to_format:

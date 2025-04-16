@@ -272,6 +272,8 @@ def main():
                 f.write("\n")
             copy2(STYLES_DIR / "main.css", output_sim_path.parent)
             copy2(STYLES_DIR / "cov.css", output_sim_path.parent)
+        if output_sim_results and args.testplan_spreadsheet:
+            testplan_obj.generate_xls_sim_results(xls)
 
     if args.output_summary:
         header = ["Name", "Passing", "Total", "Pass Rate"]

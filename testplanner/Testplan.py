@@ -174,7 +174,6 @@ class Testpoint(Element):
     fields = Element.fields + ["stage", "tests"]
 
     def __init__(self, raw_dict):
-        self.stages = ["N.A"]
         if "stage" not in raw_dict:
             raw_dict["stage"] = "N.A."
         super().__init__(raw_dict)
@@ -525,6 +524,37 @@ class Testplan:
             for tp in testpoints:
                 intent, stim, check, desc = xls.parse_standard_description(tp.desc)
                 xls.testplan_add_entry(tp.name, stage, intent, stim, check, desc)
+        xls.format_string_columns()
+        xls.save()
+
+    def generate_xls_sim_results(self, xls):
+        stages = {}
+        for tp in self.testpoints:
+            stages.setdefault(tp.stage, list()).append(tp)
+        for stage, tps in stages.items():
+            for tp in tps[::-1]:
+                if tp.name == "N.A.":
+                    if tp.stage == stage:
+                        if tp.test_results[0].total > 0:
+                            passrate = self._get_percentage(
+                                tp.test_results[0].passing, tp.test_results[0].total
+                            )
+                        else:
+                            passrate = "--%"
+                else:
+                    testplan_str = f"TOTAL: {passrate}\n\nIndividual test results:\n"
+                    for i in tp.test_results:
+                        if i.total > 0:
+                            result = "Passed" if i.passing else "FAILED"
+                        else:
+                            result = "Not implemented"
+                        testplan_str += f"  *{i.name}: {result}\n"
+                    rich_testplan_str = xls.embolden_line(testplan_str, 0)
+                    xls.testplan_append_to_entry_col(
+                        col="status",
+                        content=rich_testplan_str,
+                        entry_key=tp.name,
+                    )
         xls.format_string_columns()
         xls.save()
 
