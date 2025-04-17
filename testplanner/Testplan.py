@@ -173,10 +173,8 @@ class Testpoint(Element):
     kind = "testpoint"
     fields = Element.fields + ["stage", "tests"]
 
-    # Verification stages.
-    stages = ["N.A."]
-
     def __init__(self, raw_dict):
+        self.stages = ["N.A"]
         if "stage" not in raw_dict:
             raw_dict["stage"] = "N.A."
         super().__init__(raw_dict)
@@ -196,8 +194,6 @@ class Testpoint(Element):
 
     def _validate(self):
         super()._validate()
-        if self.stage not in Testpoint.stages:
-            Testpoint.stages.append(self.stage)
 
         # "tests" key must be list.
         if not isinstance(self.tests, list):
@@ -388,7 +384,7 @@ class Testplan:
         # Represents current progress towards each stage. Stage = N.A.
         # is used to indicate the unmapped tests.
         self.progress = {}
-        for key in Testpoint.stages:
+        for key in set([i.stage for i in self.testpoints] + ["N.A."]):
             self.progress[key] = {
                 "total": 0,
                 "written": 0,
@@ -697,7 +693,7 @@ class Testplan:
         totals = {}
         # Create testpoints to represent the total for each stage & the
         # grand total.
-        for ms in Testpoint.stages:
+        for ms in set([i.stage for i in self.testpoints] + ["N.A."]):
             arg = {
                 "name": "N.A.",
                 "desc": f"Total {ms} tests",
@@ -727,7 +723,7 @@ class Testplan:
         _process_testpoint(unmapped, totals)
 
         # Add stage totals back into 'testpoints' and sort.
-        for ms in Testpoint.stages[1:]:
+        for ms in set([i.stage for i in self.testpoints]):
             self.testpoints.append(totals[ms])
         self._sort()
 
@@ -737,7 +733,7 @@ class Testplan:
         self.testpoints.append(totals["N.A."])
 
         # Compute the progress rate for each stage.
-        for ms in Testpoint.stages:
+        for ms in set([i.stage for i in self.testpoints]):
             stat = self.progress[ms]
 
             # Remove stages that are not targeted.
