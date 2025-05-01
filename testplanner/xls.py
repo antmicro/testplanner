@@ -9,6 +9,11 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 
 class XLSX_writer:
+    re_intent = re.compile(r"Intent:\n((^.+(\n|$))+)", flags=re.MULTILINE)
+    re_stimulus = re.compile(r"Stimulus:\n((^.+(\n|$))+)", flags=re.MULTILINE)
+    re_check = re.compile(r"Check:\n((^.+(\n|$))+)", flags=re.MULTILINE)
+    re_blanklines = re.compile(r"\n\n(\n+)", flags=re.MULTILINE)
+
     def __init__(self, fp):
         self.fp = fp
         self.wb = load_workbook(fp)
@@ -72,22 +77,24 @@ class XLSX_writer:
         intent_str = ""
         stim_str = ""
         check_str = ""
-        re_intent = re.compile(r"((^.+(\n|$))+\n)Stimulus", flags=re.MULTILINE)
-        re_stimulus = re.compile(r"Stimulus:\n((^.+(\n|$))+)", flags=re.MULTILINE)
-        re_check = re.compile(r"Check:\n((^.+(\n|$))+)", flags=re.MULTILINE)
-        intent = re.search(re_intent, desc)
-        stimulus = re.search(re_stimulus, desc)
-        check = re.search(re_check, desc)
+        intent = re.search(self.re_intent, desc)
+        stimulus = re.search(self.re_stimulus, desc)
+        check = re.search(self.re_check, desc)
         if intent is not None:
-            intent_str = intent.group(1)  # discard the 'stimulus' match
+            intent_str = intent.group().strip()
         if stimulus is not None:
-            stim_str = stimulus.group()
+            stim_str = stimulus.group().strip()
         if check is not None:
-            check_str = check.group()
+            check_str = check.group().strip()
         clean_desc = desc
         if clean_description:
-            clean_desc = re.sub(re_stimulus, "", clean_desc)
-            clean_desc = re.sub(re_check, "", clean_desc)
+            clean_desc = re.sub(self.re_intent, "", clean_desc)
+            clean_desc = re.sub(self.re_stimulus, "", clean_desc)
+            clean_desc = re.sub(self.re_check, "", clean_desc)
+            # Replace each 2 or more blank lines with a single one
+            clean_desc = [l.rstrip() for l in clean_desc.splitlines()]  # noqa: E741
+            clean_desc = re.sub(self.re_blanklines, "\n\n", "\n".join(clean_desc))
+        clean_desc = clean_desc.strip()
         return (intent_str, stim_str, check_str, clean_desc)
 
     def testplan_add_entry(

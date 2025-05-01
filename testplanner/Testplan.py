@@ -522,7 +522,9 @@ class Testplan:
             stages.setdefault(tp.stage, list()).append(tp)
         for stage, testpoints in stages.items():
             for tp in testpoints:
-                intent, stim, check, desc = xls.parse_standard_description(tp.desc)
+                intent, stim, check, desc = xls.parse_standard_description(
+                    tp.desc, clean_description=True
+                )
                 xls.testplan_add_entry(tp.name, stage, intent, stim, check, desc)
         xls.format_string_columns()
         xls.save()
