@@ -72,38 +72,41 @@ class XLSX_writer:
             ).value = name
 
     def parse_standard_description(
-        self, desc: str, clean_description=False
-    ) -> Tuple[str, str, str, str]:
-        intent_str = ""
-        stim_str = ""
-        check_str = ""
-        intent = re.search(self.re_intent, desc)
-        stimulus = re.search(self.re_stimulus, desc)
-        check = re.search(self.re_check, desc)
-        if intent is not None:
-            intent_str = intent.group().strip()
-        if stimulus is not None:
-            stim_str = stimulus.group().strip()
-        if check is not None:
-            check_str = check.group().strip()
+        self, desc: str, headers: dict[str, str], clean_description: bool = False
+    ) -> Tuple[dict[str, str], str]:
+        """
+        Processes a testplans description according to 'header' data
+
+        Keyword arguments:
+        desc -- the description string
+        headers -- a dict describing the relation between
+                   searched keywords and testplan columns
+        clean_description -- whether to remove the found sections
+                             from the description (default: False)
+
+        """
+        strs = {}
         clean_desc = desc
+
+        for header in headers.keys():
+            regex = re.compile(f"{header}:\n((^.+(\n|$))+)", flags=re.MULTILINE)
+            section = re.search(regex, desc)
+            if section is not None:
+                strs[headers[header]] = section.group(1).strip()
+                if clean_description:
+                    clean_desc = re.sub(regex, "", clean_desc)
         if clean_description:
-            clean_desc = re.sub(self.re_intent, "", clean_desc)
-            clean_desc = re.sub(self.re_stimulus, "", clean_desc)
-            clean_desc = re.sub(self.re_check, "", clean_desc)
             # Replace each 2 or more blank lines with a single one
             clean_desc = [l.rstrip() for l in clean_desc.splitlines()]  # noqa: E741
-            clean_desc = re.sub(self.re_blanklines, "\n\n", "\n".join(clean_desc))
-        clean_desc = clean_desc.strip()
-        return (intent_str, stim_str, check_str, clean_desc)
+            re_blanklines = re.compile(r"\n\n(\n+)", flags=re.MULTILINE)
+            clean_desc = re.sub(re_blanklines, "\n\n", "\n".join(clean_desc))
+
+        return strs, clean_desc
 
     def testplan_add_entry(
         self,
         name: str,
-        stage: str = "N/A",
-        intent: str = "",
-        stimulus: str = "",
-        check: str = "",
+        data: dict[str, str],
         comment: str = "",
     ):
         """
@@ -114,18 +117,10 @@ class XLSX_writer:
             self.active_worksheet[
                 self.xls_column_map["name"] + str(self.tpl_entry_idx)
             ] = name
-            self.active_worksheet[
-                self.xls_column_map["milestone"] + str(self.tpl_entry_idx)
-            ] = stage
-            self.active_worksheet[
-                self.xls_column_map["intent"] + str(self.tpl_entry_idx)
-            ] = intent
-            self.active_worksheet[
-                self.xls_column_map["stimulus_procedure"] + str(self.tpl_entry_idx)
-            ] = stimulus
-            self.active_worksheet[
-                self.xls_column_map["checking_mechanism"] + str(self.tpl_entry_idx)
-            ] = check
+            for key, value in data.items():
+                self.active_worksheet[
+                    self.xls_column_map[key] + str(self.tpl_entry_idx)
+                ] = value
             self.active_worksheet[
                 self.xls_column_map["comments"] + str(self.tpl_entry_idx)
             ] = comment
@@ -173,11 +168,17 @@ class XLSX_writer:
         content length and calculates an acceptable width for them
         """
         columns_to_format = [
+            self.xls_column_map["name"],
+            self.xls_column_map["metric"],
             self.xls_column_map["intent"],
             self.xls_column_map["comments"],
             self.xls_column_map["stimulus_procedure"],
             self.xls_column_map["checking_mechanism"],
             self.xls_column_map["status"],
+            self.xls_column_map["comments"],
+        ]
+        columns_to_hide = [
+            # self.xls_column_map["comments"],
         ]
         for column in self.active_worksheet.columns:
             if column[self.tpl_entry_idx - 1].column_letter in columns_to_format:
@@ -192,3 +193,7 @@ class XLSX_writer:
                 self.active_worksheet.column_dimensions[
                     column[self.tpl_entry_idx - 1].column_letter
                 ].width = adjusted_width
+            if column[self.tpl_entry_idx - 1].column_letter in columns_to_hide:
+                self.active_worksheet.column_dimensions[
+                    column[self.tpl_entry_idx - 1].column_letter
+                ].hidden = True

@@ -522,10 +522,25 @@ class Testplan:
             stages.setdefault(tp.stage, list()).append(tp)
         for stage, testpoints in stages.items():
             for tp in testpoints:
-                intent, stim, check, desc = xls.parse_standard_description(
-                    tp.desc, clean_description=True
-                )
-                xls.testplan_add_entry(tp.name, stage, intent, stim, check, desc)
+                # This dict maps section names in descriptions
+                # to column names in XLSX_writer.
+                # The keys are used as a list of words for
+                # regexes that take out relevant paragraphs
+                # from the text. 'Comment' is omitted as it's the
+                # rest of the description and should be separate from
+                # structured data.
+                headers = {
+                    # Removed since it's not that simple to dedcide where it should be mapped to   # noqa: E501
+                    # 'Testbench': "metric",
+                    "Intent": "intent",
+                    "Stimulus": "stimulus_procedure",
+                    "Check": "checking_mechanism",
+                }
+                parts, desc = xls.parse_standard_description(tp.desc, headers, True)
+                # for now, it's the only field besides name and comment
+                # (which are processed separately) that is not a part of the description
+                parts["milestone"] = stage
+                xls.testplan_add_entry(tp.name, parts, desc)
         xls.format_string_columns()
         xls.save()
 
@@ -552,11 +567,33 @@ class Testplan:
                             result = "Not implemented"
                         testplan_str += f"  *{i.name}: {result}\n"
                     rich_testplan_str = xls.embolden_line(testplan_str, 0)
-                    xls.testplan_append_to_entry_col(
-                        col="status",
-                        content=rich_testplan_str,
-                        entry_key=tp.name,
-                    )
+                    if tp.name == "Unmapped tests":
+                        # Special handling for when test results contain tests
+                        # that were not present in the corresponding testplan
+
+                        # Save the default new entry index and replace it
+                        # with the first empty row index
+                        save_tpl_entry_idx = xls.tpl_entry_idx
+                        calc_dim_y = re.sub(
+                            "[a-zA-Z]",
+                            "",
+                            xls.active_worksheet.calculate_dimension().split(":")[1],
+                        )
+                        xls.tpl_entry_idx = int(calc_dim_y) + 1
+                        xls.testplan_add_entry(
+                            xls.embolden_line(tp.name, 0),
+                            {"status": rich_testplan_str},
+                            "Unmapped test results",
+                        )
+                        # Restore the index to the default
+                        # (first empty row in the template sheet)
+                        xls.tpl_entry_idx = save_tpl_entry_idx
+                    else:
+                        xls.testplan_append_to_entry_col(
+                            col="status",
+                            content=rich_testplan_str,
+                            entry_key=tp.name,
+                        )
         xls.format_string_columns()
         xls.save()
 
