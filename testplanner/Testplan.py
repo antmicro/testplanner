@@ -980,7 +980,9 @@ class Testplan:
         result["Pass Rate"] = self._get_percentage(tr.passing, tr.total)
         return result
 
-    def get_sim_results(self, sim_results_file, fmt="md"):
+    def get_sim_results(
+        self, sim_results_file, summary_output_path: Union[Path, None] = None, fmt="md"
+    ):
         """Returns the mapped sim result tables in HTML formatted text.
 
         The data extracted from the sim_results table HJson file is mapped into
@@ -1014,6 +1016,8 @@ class Testplan:
 
         text = "# Simulation Results\n"
         text += "## Run on {}\n".format(sim_results["timestamp"])
+        if summary_output_path:
+            text += f"[<- back to summary]({summary_output_path}/testplan-summary.html)"
         text += self.get_test_results_table()
         text += self.get_progress_table()
 
@@ -1045,11 +1049,14 @@ class Testplan:
         test_results_ = sim_results.get("test_results", [])
         total = 0
         passing = 0
+        path_rel = os.path.relpath(
+            target_sim_results_path.parent, start=summary_output_path.parent
+        )
         for item in test_results_:
             total += item.get("total", 0)
             passing += item.get("passing", 0)
         return [
-            f"[{self.name}]({os.path.relpath(target_sim_results_path, summary_output_path.parent)})",  # noqa: E501
+            f"[{self.name}]({os.path.join(path_rel, target_sim_results_path.name)})",
             passing,
             total,
             self._get_percentage(passing, total),
