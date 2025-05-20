@@ -127,6 +127,10 @@ def main():
         help="Prefix for URLs to sources in generated files",
     )
     parser.add_argument(
+        "--docs-url-prefix",
+        help="Prefix for URLs to documentation in generated files",
+    )
+    parser.add_argument(
         "-osum",
         "--output-summary",
         help="Path to output HTML/Markdown file containing summary of executed tests",
@@ -187,6 +191,7 @@ def main():
     repo_root = args.project_root if args.project_root else None
 
     source_url_prefix = args.source_url_prefix if args.source_url_prefix else ""
+    docs_url_prefix = args.docs_url_prefix if args.docs_url_prefix else ""
 
     diagram_paths = {}
     if args.diagram_paths:
@@ -229,6 +234,7 @@ def main():
             repo_top=repo_root,
             source_file_map=source_file_map,
             source_url_prefix=source_url_prefix,
+            docs_url_prefix=docs_url_prefix,
         )
 
         sim_result = None

@@ -342,6 +342,7 @@ class Testplan:
         diagram_path=None,
         source_file_map=None,
         source_url_prefix="",
+        docs_url_prefix="",
     ):
         """Initialize the testplan.
 
@@ -361,6 +362,7 @@ class Testplan:
         self.source_file_map = source_file_map
         self.repo_top = repo_top
         self.source_url_prefix = source_url_prefix
+        self.docs_url_prefix = docs_url_prefix
 
         # Split the filename into filename and tags, if provided.
         split = str(filename).split(":")
@@ -1017,7 +1019,17 @@ class Testplan:
         text = "# Simulation Results\n"
         text += "## Run on {}\n".format(sim_results["timestamp"])
         if summary_output_path:
-            text += f"[<- back to summary]({summary_output_path}/testplan-summary.html)"
+            text += (
+                f"[<- back to summary]({summary_output_path}/testplan-summary.html)\n\n"
+            )
+        nosuffix_filename = os.path.basename(self.filename).split(".")[0]
+        if self.source_file_map and self.source_file_map["docs_files"]:
+            # normalize the / at the end of the prefix
+            prefix = self.docs_url_prefix
+            if self.docs_url_prefix.endswith("/"):
+                prefix = self.docs_url_prefix.removesuffix("/")
+            if self.source_file_map["docs_files"][nosuffix_filename] != "":
+                text += f"[view documentation]({prefix}/{self.source_file_map['docs_files'][nosuffix_filename]})\n"  # noqa: E501
         text += self.get_test_results_table()
         text += self.get_progress_table()
 
