@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel='stylesheet' type='text/css' href='main.css'>
+    <link rel='stylesheet' type='text/css' href='cov.css'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testplan simulation results</title>
+</head>
+<body>
+    <div class="content">
+        <header>
+            <nav class="navbar">
+                <div class="nav-left">
+                    {% if(summary_url) %}
+                    <div class="nav-urls">
+                        <a href="{{ summary_url }}" class="button tooltip">
+                            <img src="assets/caret.svg" alt="Back" style="transform: scale(-2) translatey(-1px);" />
+                            <span class="tooltip-text">Go Back</span>
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <span class="container-title">
+                        {{title}}
+                    </span>
+
+                    {% if(documentation_url) %}
+                    <div class="nav-urls">
+                        <a href="{{ documentation_url }}" class="button tooltip">
+                            <img src="assets/file.svg" alt="Docs" style="transform: scale(1.25) translatey(1px);"/>
+                            <span class="tooltip-text">Go to documentation</span>
+                        </a>
+                    </div>
+                    {% endif %}
+
+                </div>
+                {% if(git_repo or git_branch or git_sha  or timestamp) %}
+                <div class="nav-right">
+                    {% if(timestamp) %}
+                    <div class="nav-item">
+                        <img src="./assets/date.svg" alt="Run on"/>
+                        {{ timestamp }}
+                    </div>
+                    {% endif %}
+                    {% if(git_repo) %}
+                    <div class="nav-item">
+                        <img src="./assets/repo.svg" alt="Run on"/>
+                        {{ git_repo }}
+                    </div>
+                    {% endif %}
+                    {% if(git_branch) %}
+                    <div class="nav-item">
+                        <img src="./assets/branch.svg" alt="Run on"/>
+                        {{ git_branch }}
+                    </div>
+                    {% endif %}
+                    {% if(git_sha) %}
+                    <div class="nav-item">
+                        <img src="./assets/commit.svg" alt="Run on"/>
+                        {{git_sha}}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </nav>
+        </header>
+        <center class='results'>
+        <div class="page-wrapper">
+            <div class="test-results">
+                {{ test_results_table }}
+            </div>
+            <div class="progress-table">
+                {{ progress_table }}
+            </div>
+        </div>
+        </center>
+    </div>
+    <footer>
+    </footer>
+</body>
+</html>
