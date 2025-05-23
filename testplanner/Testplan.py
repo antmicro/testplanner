@@ -1023,7 +1023,7 @@ class Testplan:
                 f"[<- back to summary]({summary_output_path}/testplan-summary.html)\n\n"
             )
         nosuffix_filename = os.path.basename(self.filename).split(".")[0]
-        if self.source_file_map and self.source_file_map["docs_files"]:
+        if self.source_file_map and "docs_files" in self.source_file_map:
             # normalize the / at the end of the prefix
             prefix = self.docs_url_prefix
             if self.docs_url_prefix.endswith("/"):
