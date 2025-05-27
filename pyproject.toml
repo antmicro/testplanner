@@ -20,6 +20,7 @@ build-backend = "setuptools.build_meta"
 [project.scripts]
 testplanner = "testplanner.testplanner:main"
 cocotbxml-to-hjson = "testplanner.cocotbxml_to_hjson:main"
+testplanner-summary-merger = "testplanner.summary_merger:main"
 
 [tool.setuptools.packages.find]
 include = [
