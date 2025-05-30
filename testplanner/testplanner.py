@@ -12,11 +12,10 @@ import sys
 from pathlib import Path
 from shutil import copy2, copytree
 
-import git
 import yaml
 from tabulate import tabulate
 
-from testplanner.Testplan import Testplan
+from testplanner.Testplan import Testplan, parse_repo_data
 
 STYLES_DIR = Path(Path(__file__).parent.resolve() / "template")
 ASSETS_DIR = Path(Path(__file__).parent.resolve() / "template/assets")
@@ -146,6 +145,11 @@ def main():
     parser.add_argument(
         "--output-sim-results-prefix",
         help="Prefix for tests' results to be used in testplan Markdown files",
+        type=str,
+    )
+    parser.add_argument(
+        "--repository-name",
+        help="Display name for the processed repository",
         type=str,
     )
     parser.add_argument(
@@ -288,7 +292,11 @@ def main():
                     )
                     f.write(
                         testplan_obj.get_sim_results(
-                            sim_result, relative_url, repo_root, fmt=format
+                            sim_result,
+                            relative_url,
+                            repo_root,
+                            args.repository_name,
+                            fmt=format,
                         )
                     )
                     f.write("\n")
@@ -319,13 +327,9 @@ def main():
                     "test_results_table": summary,
                 }
                 if args.project_root:
-                    repo = git.Repo(args.project_root)
-                    data["git_sha"] = repo.head.commit.hexsha[:8]
-                    try:
-                        data["git_branch"] = repo.active_branch.name
-                    except TypeError:
-                        data["git_branch"] = "Detached HEAD"
-                    data["git_repo"] = repo.working_tree_dir.split("/")[-1]
+                    data["git_repo"], data["git_branch"], data["git_sha"] = (
+                        parse_repo_data(args.repository_name, args.project_root)
+                    )
                 f.write(Testplan.render_template(data))
             else:
                 f.write(summary)

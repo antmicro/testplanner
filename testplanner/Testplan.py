@@ -41,6 +41,32 @@ def format_time(time: Optional[Union[int, float, str]]) -> str:
         return time
 
 
+def parse_repo_data(repo_name, repo_path):
+    repo = git.Repo(repo_path)
+    sha = repo.head.commit.hexsha[:8]
+    branch = None
+    try:
+        if repo.head.is_detached:
+            branch_name = None
+            for parent in repo.head.commit.parents:
+                for ref in repo.references:
+                    if ref.commit == parent:
+                        branch_name = ref.name
+                        break
+                if branch_name:
+                    branch = branch_name
+                    break
+        else:
+            branch = repo.active_branch.name
+    except TypeError:
+        pass
+    if repo_name:
+        repo = repo_name
+    else:
+        repo = repo.working_tree_dir.split("/")[-1]
+    return repo, branch, sha
+
+
 class Result:
     """The results for a single test"""
 
@@ -1006,6 +1032,7 @@ class Testplan:
         sim_results_file,
         summary_output_path: Union[Path, None] = None,
         repo_path: Union[Path, None] = None,
+        repo_name: Union[str, None] = None,
         fmt="md",
     ):
         """Returns the mapped sim result tables in HTML formatted text.
@@ -1042,7 +1069,7 @@ class Testplan:
         self.cov_results = sim_results.get("cov_results", [])
 
         if fmt == "html":
-            return self.sim_results_html(summary_output_path, repo_path)
+            return self.sim_results_html(summary_output_path, repo_path, repo_name)
         else:
             return self.sim_results_markdown(summary_output_path)
 
@@ -1059,6 +1086,7 @@ class Testplan:
         self,
         summary_output_path,
         repo_path: Union[Path, None] = None,
+        repo_name: Union[str, None] = None,
     ):
         if summary_output_path:
             summary_url = summary_output_path
@@ -1088,14 +1116,9 @@ class Testplan:
             "documentation_url": doc_url,
         }
         if repo_path:
-            repo = git.Repo(repo_path)
-            data["git_sha"] = repo.head.commit.hexsha[:8]
-            try:
-                data["git_branch"] = repo.active_branch.name
-            except TypeError:
-                data["git_branch"] = "Detached HEAD"
-            data["git_repo"] = repo.working_tree_dir.split("/")[-1]
-
+            data["git_repo"], data["git_branch"], data["git_sha"] = parse_repo_data(
+                repo_name, repo_path
+            )
         return Testplan.render_template(data)
 
     def sim_results_markdown(self, summary_output_path):
