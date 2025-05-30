@@ -533,10 +533,11 @@ class Testplan:
                 # structured data.
                 headers = {
                     # Removed since it's not that simple to dedcide where it should be mapped to   # noqa: E501
-                    # 'Testbench': "metric",
+                    "Testbench": "testbench",
                     "Intent": "intent",
                     "Stimulus": "stimulus_procedure",
                     "Check": "checking_mechanism",
+                    "Coverpoints": "coverpoints",
                 }
                 parts, desc = xls.parse_standard_description(tp.desc, headers, True)
                 # for now, it's the only field besides name and comment

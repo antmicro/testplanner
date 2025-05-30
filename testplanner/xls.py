@@ -27,17 +27,19 @@ class XLSX_writer:
             "name": "B",
             "type": "C",
             "metric": "D",
-            "intent": "E",
-            "stimulus_procedure": "F",
-            "checking_mechanism": "G",
-            "assignee": "H",
-            "milestone": "I",
-            "priority": "J",
-            "status": "K",
-            "effort_estimate": "L",
-            "remaining": "M",
-            "done": "N",
-            "comments": "O",
+            "testbench": "E",
+            "intent": "F",
+            "stimulus_procedure": "G",
+            "checking_mechanism": "H",
+            "coverpoints": "I",
+            "assignee": "J",
+            "milestone": "K",
+            "priority": "L",
+            "status": "M",
+            "effort_estimate": "N",
+            "remaining": "O",
+            "done": "P",
+            "comments": "Q",
         }
         template_id_cell_pos = self.find_first_empty_cell()
         if template_id_cell_pos:
@@ -97,14 +99,14 @@ class XLSX_writer:
         for part in parts:
             for header in headers.keys():
                 if part.lstrip().startswith(header):
-                    strs[headers[header]] = part.lstrip().removeprefix(header+":\n")
+                    strs[headers[header]] = part.lstrip().removeprefix(header + ":\n")
                     state = header
                     if clean_description:
                         parts_to_remove.append(parts.index(part))
                     break
             else:
                 if state:
-                    strs[headers[state]] += '\n\n'+part
+                    strs[headers[state]] += "\n\n" + part
                     if clean_description:
                         parts_to_remove.append(parts.index(part))
         if clean_description:
@@ -180,7 +182,7 @@ class XLSX_writer:
         """
         columns_to_format = [
             self.xls_column_map["name"],
-            self.xls_column_map["metric"],
+            self.xls_column_map["testbench"],
             self.xls_column_map["intent"],
             self.xls_column_map["comments"],
             self.xls_column_map["stimulus_procedure"],
