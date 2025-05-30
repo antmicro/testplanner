@@ -87,19 +87,30 @@ class XLSX_writer:
         """
         strs = {}
         clean_desc = desc
+        parts = desc.split("\n\n")
 
-        for header in headers.keys():
-            regex = re.compile(f"{header}:\n((^.+(\n|$))+)", flags=re.MULTILINE)
-            section = re.search(regex, desc)
-            if section is not None:
-                strs[headers[header]] = section.group(1).strip()
-                if clean_description:
-                    clean_desc = re.sub(regex, "", clean_desc)
+        # Storing indexes to parts that have to be removed -
+        # when it was done during the loop, it lead to skipping
+        parts_to_remove = []
+        state = None
+
+        for part in parts:
+            for header in headers.keys():
+                if part.lstrip().startswith(header):
+                    strs[headers[header]] = part.lstrip().removeprefix(header+":\n")
+                    state = header
+                    if clean_description:
+                        parts_to_remove.append(parts.index(part))
+                    break
+            else:
+                if state:
+                    strs[headers[state]] += '\n\n'+part
+                    if clean_description:
+                        parts_to_remove.append(parts.index(part))
         if clean_description:
-            # Replace each 2 or more blank lines with a single one
-            clean_desc = [l.rstrip() for l in clean_desc.splitlines()]  # noqa: E741
-            re_blanklines = re.compile(r"\n\n(\n+)", flags=re.MULTILINE)
-            clean_desc = re.sub(re_blanklines, "\n\n", "\n".join(clean_desc))
+            for ptr in sorted(parts_to_remove)[::-1]:
+                parts.pop(ptr)
+            clean_desc = "\n\n".join(parts)
 
         return strs, clean_desc
 
