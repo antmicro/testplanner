@@ -119,7 +119,7 @@ def main():
     )
     parser.add_argument(
         "--testplan-file-map",
-        help="Path to the map with test links",
+        help="Path to the file with path and resource mappings for testplans",
         type=Path,
     )
     parser.add_argument(
@@ -188,10 +188,10 @@ def main():
     else:
         sim_results = None
 
-    source_file_map = None
+    resource_map_data = None
     if args.testplan_file_map:
         with args.testplan_file_map.open() as file_map_fd:
-            source_file_map = yaml.safe_load(file_map_fd)
+            resource_map_data = yaml.safe_load(file_map_fd)
 
     repo_root = args.project_root if args.project_root else None
 
@@ -237,7 +237,7 @@ def main():
             testplan,
             diagram_path=diagram_path,
             repo_top=repo_root,
-            source_file_map=source_file_map,
+            resource_map_data=resource_map_data,
             source_url_prefix=source_url_prefix,
             docs_url_prefix=docs_url_prefix,
         )

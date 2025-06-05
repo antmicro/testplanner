@@ -19,6 +19,7 @@ from jinja2 import Template
 from tabulate import tabulate
 
 import testplanner.template as html_templates
+from testplanner.resource_map import ResourceMap
 
 
 def format_time(time: Optional[Union[int, float, str]]) -> str:
@@ -370,7 +371,7 @@ class Testplan:
         repo_top=None,
         name=None,
         diagram_path=None,
-        source_file_map=None,
+        resource_map_data=None,
         source_url_prefix="",
         docs_url_prefix="",
     ):
@@ -389,10 +390,10 @@ class Testplan:
         self.testpoints = []
         self.covergroups = []
         self.test_results_mapped = False
-        self.source_file_map = source_file_map
+        self.resource_map = ResourceMap(resource_map_data)
         self.repo_top = repo_top
         self.source_url_prefix = source_url_prefix
-        self.docs_url_prefix = docs_url_prefix
+        self.docs_url_prefix = docs_url_prefix.rstrip("/")
 
         # Split the filename into filename and tags, if provided.
         split = str(filename).split(":")
@@ -658,33 +659,14 @@ class Testplan:
             )
             output.write(":::\n")
 
-        if self.source_file_map is not None and "testplans" in self.source_file_map:
-            found = False
-            for entry in self.source_file_map["testplans"]:
-                srcregex, templates = list(entry.items())[0]
-                if not re.match(srcregex, self.name):
-                    continue
-                for template in templates:
-                    pathcandidate = template.format(
-                        name=self.name, testplanpath=self.filename
-                    )
-                    full_path = self.repo_top.resolve() / pathcandidate
-                    if not full_path.exists():
-                        pathcandidate = template.format(
-                            name=self.name.lower(), testplanpath=self.filename
-                        )
-                        full_path = self.repo_top.resolve() / pathcandidate
-                        if not full_path.exists():
-                            continue
-                    output.write(
-                        f"[Source file]({self.source_url_prefix}/{pathcandidate})\n\n"
-                    )
-                    found = True
-                    break
-                if not found:
-                    print(
-                        f'Source file for testplan "{self.name}" not found ({self.filename})!'  # noqa: E501
-                    )
+        if self.resource_map:
+            source = self.resource_map.get("source", self.filename, self.name)
+            if source:
+                output.write(f"[Source file]({self.source_url_prefix}/{source})\n\n")
+            else:
+                print(
+                    f'Source file for testplan "{self.name}" not found ({self.filename})!'  # noqa: E501
+                )
 
         tests_to_urls = {}
         if sim_results_path:
@@ -722,12 +704,12 @@ class Testplan:
                 if len(tp.tests) == 0:
                     output.write("No Tests Implemented")
                 elif len(tp.tests) == 1:
-                    test_name = self.find_test_file(tp.tests[0], tests_to_urls)
+                    test_name = self.find_test_file(tp.tests[0], tp.name, tests_to_urls)
                     output.write(f"Test: {test_name}")
                 else:
                     output.write("Tests:\n")
                     for test in tp.tests:
-                        test_name = self.find_test_file(test, tests_to_urls)
+                        test_name = self.find_test_file(test, tp.name, tests_to_urls)
                         output.write(f"- {test_name}\n")
 
                 output.write("\n\n" + tp.desc.strip() + "\n\n")
@@ -737,24 +719,22 @@ class Testplan:
             for covergroup in self.covergroups:
                 output.write(f"### {covergroup.name}\n\n{covergroup.desc.strip()}\n\n")
 
-    def find_test_file(self, test_name, tests_to_urls):
+    def find_test_file(self, test_name, testpoint_name, tests_to_urls):
         if test_name in tests_to_urls:
             return f"[{test_name}]({tests_to_urls[test_name]})"
-        if not self.source_file_map or "test_files" not in self.source_file_map:
+        test_source = self.resource_map.get(
+            "source", self.filename, self.name, testpoint_name, test_name
+        )
+        if test_source is None:
             return test_name
-        for testregex, testpath in self.source_file_map["test_files"].items():
-            m = re.match(testregex, test_name)
-            if m:
-                pathregex = re.sub(testregex, testpath, test_name)
-                candidatepaths = sorted(self.repo_top.resolve().glob(pathregex))
-                assert len(candidatepaths) <= 1, (
-                    f"Multiple files assigned to test {test_name}:  {testregex} {candidatepaths}"  # noqa: E501
-                )
-                if len(candidatepaths) == 0:
-                    return test_name
-                relative_path = candidatepaths[0].relative_to(self.repo_top.resolve())
-                return f"[{test_name}]({self.source_url_prefix}/{relative_path})"
-        return test_name
+        candidatepaths = sorted(self.repo_top.resolve().glob(test_source))
+        assert len(candidatepaths) <= 1, (
+            f"Multiple files assigned to test {test_name}:  {test_source} {candidatepaths}"  # noqa: E501
+        )
+        if len(candidatepaths) == 0:
+            return test_name
+        relative_path = candidatepaths[0].relative_to(self.repo_top.resolve())
+        return f"[{test_name}]({self.source_url_prefix}/{relative_path})"
 
     def map_test_results(self, test_results):
         """Map test results to testpoints."""
@@ -1082,6 +1062,13 @@ class Testplan:
         content = tm.render(data)
         return content
 
+    def get_testplan_doc_url(self):
+        doc_url = ""
+        found_suffix = self.resource_map.get("docs_html", self.filename, self.name)
+        if found_suffix:
+            doc_url = f"{self.docs_url_prefix}/{found_suffix}"
+        return doc_url
+
     def sim_results_html(
         self,
         summary_output_path,
@@ -1092,17 +1079,7 @@ class Testplan:
             summary_url = summary_output_path
         else:
             summary_url = ""
-        nosuffix_filename = os.path.basename(self.filename).split(".")[0]
-        doc_url = ""
-        if self.source_file_map and "docs_files" in self.source_file_map:
-            # normalize the / at the end of the prefix
-            prefix = self.docs_url_prefix
-            if self.docs_url_prefix.endswith("/"):
-                prefix = self.docs_url_prefix.removesuffix("/")
-            if self.source_file_map["docs_files"][nosuffix_filename] != "":
-                doc_url = (
-                    f"{prefix}/{self.source_file_map['docs_files'][nosuffix_filename]}"
-                )
+        doc_url = self.get_testplan_doc_url()
 
         data = {
             "timestamp": self.timestamp,
@@ -1126,14 +1103,9 @@ class Testplan:
         text += "## Run on {}\n".format(self.timestamp)
         if summary_output_path:
             text += f"[<- back to summary]({summary_output_path})"
-        nosuffix_filename = os.path.basename(self.filename).split(".")[0]
-        if self.source_file_map and "docs_files" in self.source_file_map:
-            # normalize the / at the end of the prefix
-            prefix = self.docs_url_prefix
-            if self.docs_url_prefix.endswith("/"):
-                prefix = self.docs_url_prefix.removesuffix("/")
-            if self.source_file_map["docs_files"][nosuffix_filename] != "":
-                text += f"[view documentation]({prefix}/{self.source_file_map['docs_files'][nosuffix_filename]})\n"  # noqa: E501
+        doc_url = self.get_testplan_doc_url()
+        if doc_url:
+            text += f"[view documentation]({doc_url})\n"
         text += self.get_test_results_table()
         text += self.get_progress_table()
 
