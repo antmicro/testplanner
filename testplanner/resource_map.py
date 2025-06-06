@@ -66,9 +66,9 @@ class ResourceMap:
         name = names[0]
         level = levels[0]
         if name is None:
-            return None
+            return False
         if level not in entries:
-            return None
+            return False
         for entry in entries[level]:
             if "source" in entry:
                 self.test_source = self.resolve_template(entry["source"])
@@ -86,8 +86,11 @@ class ResourceMap:
             self.regex_groups[level[:-1]] = list(matched.groups())
             if self.resource_type in entry:
                 self.result = self.resolve_template(entry[self.resource_type])
+                return True
             if len(levels) > 1:
-                self.scan_tree(entry, names[1:], levels[1:])
+                if self.scan_tree(entry, names[1:], levels[1:]):
+                    return True
+        return False
 
     def get(
         self,
