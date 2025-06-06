@@ -39,6 +39,7 @@ class ResourceMap:
         self.testpoint = testpoint
         self.test = test
         self.testplan_file = testplan_file
+        self.test_source = None
         self.regex_groups = {}
         self.result = None
         self.resource_type = resource_type
@@ -50,6 +51,7 @@ class ResourceMap:
             testpoint=self.testpoint,
             test=self.test,
             testplan_file=self.testplan_file,
+            test_source=self.test_source,
             regex_groups=self.regex_groups,
         )
 
@@ -68,6 +70,8 @@ class ResourceMap:
         if level not in entries:
             return None
         for entry in entries[level]:
+            if "source" in entry:
+                self.test_source = self.resolve_template(entry["source"])
             tocheck = "name"
             val = name
             if level == "testplans":
