@@ -112,6 +112,10 @@ td {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+td > b {
+  font-weight: bold;
+}
+
 /* Enable border on all centered tables aside from the info table */
 body > center > table:not(.info-table) td:not(.coverBarOutline) {
   border: none;

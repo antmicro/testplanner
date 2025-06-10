@@ -736,7 +736,7 @@ class Testplan:
         relative_path = candidatepaths[0].relative_to(self.repo_top.resolve())
         return f"[{test_name}]({self.source_url_prefix}/{relative_path})"
 
-    def map_test_results(self, test_results):
+    def map_test_results(self, test_results, format="md"):
         """Map test results to testpoints."""
         # Maintain a list of tests we already counted.
         tests_seen = set()
@@ -783,7 +783,13 @@ class Testplan:
                 "tests": [],
             }
             totals[ms] = Testpoint(arg)
-            totals[ms].test_results = [Result("**TOTAL**")]
+            target = ""
+            if ms != "N.A.":
+                target = f" for {ms}"
+            if format == "md":
+                totals[ms].test_results = [Result(f"**TOTAL{target}**")]
+            else:
+                totals[ms].test_results = [Result(f"<b>TOTAL{target}</b>")]
 
         # Create unmapped as a testpoint to represent tests from the simulation
         # results that could not be mapped to the testpoints.
@@ -1043,7 +1049,7 @@ class Testplan:
                 print(f"Error: data in {sim_results_file} is malformed!\n{e}")
                 sys.exit(1)
 
-        self.map_test_results(test_results)
+        self.map_test_results(test_results, fmt)
         self.map_covergroups(sim_results.get("covergroups", []))
         self.timestamp = sim_results["timestamp"]
         self.cov_results = sim_results.get("cov_results", [])
