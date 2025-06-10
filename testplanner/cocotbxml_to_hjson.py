@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+# Copyright (c) 2025 Antmicro <www.antmicro.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Converter of xunit-like XML files with test results from cocotb to HJSON.
+"""
+
 import argparse
 import logging
 import re
@@ -11,7 +20,7 @@ import hjson
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "-i",
         "--input-xmls",

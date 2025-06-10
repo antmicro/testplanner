@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Antmicro <www.antmicro.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Class parsing the resource mapping files for testplanner.
+"""
+
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -16,7 +24,20 @@ TESTPLAN_KEYWORDS = TESTPLAN_LEVELS + ["name", "filename"]
 
 
 class ResourceMap:
+    """
+    Class processing the resource mappings.
+    """
+
     def __init__(self, resource_map: Optional[Union[Path, str, Dict]]):
+        """
+        Loads resource mapping.
+
+        Parameters
+        ----------
+        resource_map: Optional[Union[Path, str, Dict]]
+            Path to the resource mapping, or dictionary with
+            resource mapping.
+        """
         if resource_map is None:
             self.testplan_rules = []
         elif isinstance(resource_map, dict):
@@ -35,6 +56,9 @@ class ResourceMap:
         test: Optional[str] = None,
         testplan_file: Optional[str] = None,
     ):
+        """
+        Resets the search.
+        """
         self.testplan = testplan
         self.testpoint = testpoint
         self.test = test
@@ -45,6 +69,9 @@ class ResourceMap:
         self.resource_type = resource_type
 
     def resolve_template(self, template: str):
+        """
+        Resolves the template using loader's state.
+        """
         return self.regex_from_template(
             template=template,
             testplan=self.testplan,
@@ -56,13 +83,43 @@ class ResourceMap:
         )
 
     def template_match(self, regex_template: str, string: str):
+        """
+        Check if string matches the template.
+
+        Parameters
+        ----------
+        regex_template: str
+            Regex to check string against
+        string: str
+            String to check
+        """
         return re.match(self.resolve_template(regex_template), str(string))
 
     def regex_from_template(self, template: str, **kwargs):
         tm = Template(template)
         return tm.render(**kwargs)
 
-    def scan_tree(self, entries: List, names: Optional[List], levels: Optional[List]):
+    def scan_tree(
+        self, entries: List, names: Optional[List], levels: Optional[List]
+    ) -> bool:
+        """
+        Recursively scans the tree in search for query.
+
+        Parameters
+        ----------
+        entries: List
+            List of pattern entries
+        names: Optional[List]
+            Names of current testplan/testpoint/test
+            (depending on recursion level)
+        levels: Optional[List]
+            Names of layers (testplans, testpoints, tests)
+
+        Returns
+        -------
+        bool:
+            True if the resource was found, False otherwise
+        """
         name = names[0]
         level = levels[0]
         if name is None:
@@ -99,7 +156,28 @@ class ResourceMap:
         testplan: str,
         testpoint: Optional[str] = None,
         test: Optional[str] = None,
-    ):
+    ) -> Optional[str]:
+        """
+        Retrieves resource from resource mapping, if present.
+
+        Parameters
+        ----------
+        resource_type: str
+            Name of the resource
+        testplan_file: Union[str, Path]
+            Path to the testplan
+        testplan: str
+            Name of the testplan
+        testpoint: Optional[str]
+            Name of the testpoint (optional)
+        test: Optional[str]
+            Name of the test (optional)
+
+        Returns
+        -------
+        Optional[str]:
+            Resource or None if not found
+        """
         self.prepare(resource_type, testplan, testpoint, test, testplan_file)
         assert self.resource_type not in TESTPLAN_KEYWORDS, (
             f"resource_type cannot be one of {TESTPLAN_KEYWORDS}"
