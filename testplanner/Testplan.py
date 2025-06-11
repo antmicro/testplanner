@@ -661,8 +661,18 @@ class Testplan:
 
         if self.resource_map:
             source = self.resource_map.get("source", self.filename, self.name)
-            if source:
-                output.write(f"[Source file]({self.source_url_prefix}/{source})\n\n")
+            if source is not None:
+                candidatepaths = sorted(self.repo_top.resolve().glob(source))
+                assert len(candidatepaths) <= 1, (
+                    f"Multiple source files assigned to testplan {self.name}:  {source} {candidatepaths}"  # noqa: E501
+                )
+                if len(candidatepaths) == 1:
+                    path = candidatepaths[0].relative_to(self.repo_top.resolve())
+                    output.write(f"[Source file]({self.source_url_prefix}/{path})\n\n")
+                else:
+                    print(
+                        f'Source file for testplan "{self.name}" not found ({self.filename}) (regex: {source})!'  # noqa: E501
+                    )
             else:
                 print(
                     f'Source file for testplan "{self.name}" not found ({self.filename})!'  # noqa: E501
@@ -729,7 +739,7 @@ class Testplan:
             return test_name
         candidatepaths = sorted(self.repo_top.resolve().glob(test_source))
         assert len(candidatepaths) <= 1, (
-            f"Multiple files assigned to test {test_name}:  {test_source} {candidatepaths}"  # noqa: E501
+            f"Multiple files assigned to test {self.name}/{testpoint_name}/{test_name}:  {test_source} {candidatepaths}"  # noqa: E501
         )
         if len(candidatepaths) == 0:
             return test_name
@@ -775,7 +785,10 @@ class Testplan:
         totals = {}
         # Create testpoints to represent the total for each stage & the
         # grand total.
-        for ms in set([i.stage for i in self.testpoints] + ["N.A."]):
+        totstages = set([i.stage for i in self.testpoints])
+        if len(totstages) > 1:
+            totstages.add("N.A.")
+        for ms in totstages:
             arg = {
                 "name": "N.A.",
                 "desc": f"Total {ms} tests",
@@ -818,7 +831,8 @@ class Testplan:
         # Append unmapped and the grand total at the end.
         if unmapped.test_results:
             self.testpoints.append(unmapped)
-        self.testpoints.append(totals["N.A."])
+        if len(totstages) > 1:
+            self.testpoints.append(totals["N.A."])
 
         # Compute the progress rate for each stage.
         for ms in set([i.stage for i in self.testpoints]):
