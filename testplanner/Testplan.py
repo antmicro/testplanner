@@ -733,7 +733,12 @@ class Testplan:
         if test_name in tests_to_urls:
             return f"[{test_name}]({tests_to_urls[test_name]})"
         test_source = self.resource_map.get(
-            "source", self.filename, self.name, testpoint_name, test_name
+            "source",
+            self.filename,
+            self.name,
+            testpoint_name,
+            test_name,
+            expected_levels=["tests"],
         )
         if test_source is None:
             return test_name

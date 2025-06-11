@@ -101,7 +101,11 @@ class ResourceMap:
         return tm.render(**kwargs)
 
     def scan_tree(
-        self, entries: List, names: Optional[List], levels: Optional[List]
+        self,
+        entries: List,
+        names: Optional[List],
+        levels: Optional[List],
+        expected_levels: Optional[List] = None,
     ) -> bool:
         """
         Recursively scans the tree in search for query.
@@ -115,6 +119,11 @@ class ResourceMap:
             (depending on recursion level)
         levels: Optional[List]
             Names of layers (testplans, testpoints, tests)
+        expected_levels: Optional[List[str]]
+            Expected levels of testplan where resource should be found.
+            The found resource will be picked only if it is found in
+            expected_levels (e.g. `["testpoints", "tests"]` will only
+            select resources from those levels).
 
         Returns
         -------
@@ -145,9 +154,10 @@ class ResourceMap:
             if not matched:
                 continue
             self.regex_groups[level[:-1]] = list(matched.groups())
-            if self.resource_type in entry:
-                self.result = self.resolve_template(entry[self.resource_type])
-                return True
+            if expected_levels is None or level in expected_levels:
+                if self.resource_type in entry:
+                    self.result = self.resolve_template(entry[self.resource_type])
+                    return True
             if len(levels) > 1:
                 if self.scan_tree(entry, names[1:], levels[1:]):
                     return True
@@ -160,6 +170,7 @@ class ResourceMap:
         testplan: str,
         testpoint: Optional[str] = None,
         test: Optional[str] = None,
+        expected_levels: Optional[List[str]] = None,
     ) -> Optional[str]:
         """
         Retrieves resource from resource mapping, if present.
@@ -176,6 +187,11 @@ class ResourceMap:
             Name of the testpoint (optional)
         test: Optional[str]
             Name of the test (optional)
+        expected_levels: Optional[List[str]]
+            Expected levels of testplan where resource should be found.
+            The found resource will be picked only if it is found in
+            expected_levels (e.g. `["testpoints", "tests"]` will only
+            select resources from those levels).
 
         Returns
         -------
@@ -190,5 +206,6 @@ class ResourceMap:
             self.testplan_rules,
             names=[testplan, testpoint, test],
             levels=TESTPLAN_LEVELS,
+            expected_levels=expected_levels,
         )
         return self.result
