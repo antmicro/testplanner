@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Union
 
 import yaml
 from jinja2 import Template
+from jinja2.exceptions import UndefinedError
 
 TESTPLAN_LEVELS = [
     "testplans",
@@ -128,7 +129,10 @@ class ResourceMap:
             return False
         for entry in entries[level]:
             if "source" in entry:
-                self.test_source = self.resolve_template(entry["source"])
+                try:
+                    self.test_source = self.resolve_template(entry["source"])
+                except UndefinedError:
+                    pass
             tocheck = "name"
             val = name
             if level == "testplans":
@@ -136,7 +140,7 @@ class ResourceMap:
                     "Testplan entry cannot have both filename and name provided"
                 )
                 tocheck = "filename" if "filename" in entry else "name"
-                val = self.testplan_file if "filename" in entry else "name"
+                val = self.testplan_file if "filename" in entry else self.testplan
             matched = self.template_match(entry[tocheck], val)
             if not matched:
                 continue
