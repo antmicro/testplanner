@@ -673,10 +673,6 @@ class Testplan:
                     print(
                         f'Source file for testplan "{self.name}" not found ({self.filename}) (regex: {source})!'  # noqa: E501
                     )
-            else:
-                print(
-                    f'Source file for testplan "{self.name}" not found ({self.filename})!'  # noqa: E501
-                )
 
         tests_to_urls = {}
         if sim_results_path:
@@ -790,9 +786,7 @@ class Testplan:
         totals = {}
         # Create testpoints to represent the total for each stage & the
         # grand total.
-        totstages = set([i.stage for i in self.testpoints])
-        if len(totstages) > 1:
-            totstages.add("N.A.")
+        totstages = set([i.stage for i in self.testpoints] + ["N.A."])
         for ms in totstages:
             arg = {
                 "name": "N.A.",
@@ -836,7 +830,8 @@ class Testplan:
         # Append unmapped and the grand total at the end.
         if unmapped.test_results:
             self.testpoints.append(unmapped)
-        if len(totstages) > 1:
+        # if there is only one stage + TOTAL, print only TOTAL for current stage
+        if len(totstages) > 2:
             self.testpoints.append(totals["N.A."])
 
         # Compute the progress rate for each stage.
