@@ -1161,10 +1161,24 @@ class Testplan:
                 f"[{self.name}]({os.path.join(path_rel, target_sim_results_path.name)})"
             )
 
+        values = []
+        for key in self.progress:
+            stat = self.progress[key]
+            values.append(stat)
+        progress = defaultdict(lambda: 0)
+        if len(values):
+            keys = values[0].keys()
+            for value in values:
+                for key in keys:
+                    # Skip pass rate and anomalies like N.A.
+                    if isinstance(value[key], int):
+                        progress[key] += value[key]
+
         return [
             link,
             passing,
             total,
+            self._get_percentage(progress["passing"], progress["total"]),
             self._get_percentage(passing, total),
         ]
 

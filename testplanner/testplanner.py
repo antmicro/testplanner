@@ -270,16 +270,6 @@ def main():
                 )
                 f.write("\n")
 
-        if args.output_summary:
-            tests_summary.append(
-                testplan_obj.get_testplan_summary(
-                    args.output_summary,
-                    sim_result,
-                    output_sim_path,
-                    html_links=args.output_summary.suffix == ".html",
-                )
-            )
-
         if output_sim_results:
             with open(output_sim_path, "a" if output_sim_results_single else "w") as f:
                 relative_url = None
@@ -303,12 +293,22 @@ def main():
             copy2(STYLES_DIR / "main.css", output_sim_path.parent)
             copy2(STYLES_DIR / "cov.css", output_sim_path.parent)
             copytree(ASSETS_DIR, output_sim_path.parent / "assets", dirs_exist_ok=True)
+
+        if args.output_summary:
+            tests_summary.append(
+                testplan_obj.get_testplan_summary(
+                    args.output_summary,
+                    sim_result,
+                    output_sim_path,
+                    html_links=args.output_summary.suffix == ".html",
+                )
+            )
         if output_sim_results and args.testplan_spreadsheet:
             testplan_obj.generate_xls_sim_results(xls)
 
     if args.output_summary:
-        header = ["Name", "Passing", "Total", "Pass Rate"]
-        colalign = ["center", "right", "right", "right"]
+        header = ["Name", "Passing", "Total", "Progress", "Pass Rate"]
+        colalign = ["center", "right", "right", "right", "right"]
         if args.output_summary.suffix == ".html":
             sum_title = f"<h3> {args.output_summary_title}\n </h3>\n"
             summary = ""
