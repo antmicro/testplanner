@@ -307,8 +307,15 @@ def main():
             testplan_obj.generate_xls_sim_results(xls)
 
     if args.output_summary:
-        header = ["Name", "Passing", "Total", "Progress", "Pass Rate"]
-        colalign = ["center", "right", "right", "right", "right"]
+        header = [
+            "Name",
+            "Passing tests",
+            "Implemented tests",
+            "Planned tests",
+            "Implementation progress",
+            "Pass Rate",
+        ]
+        colalign = ["center", "right", "right", "right", "right", "right"]
         if args.output_summary.suffix == ".html":
             sum_title = f"<h3> {args.output_summary_title}\n </h3>\n"
             summary = ""

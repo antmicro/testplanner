@@ -418,9 +418,9 @@ class Testplan:
         self.progress = {}
         for key in set([i.stage for i in self.testpoints] + ["N.A."]):
             self.progress[key] = {
-                "total": 0,
-                "written": 0,
                 "passing": 0,
+                "written": 0,
+                "total": 0,
                 "progress": 0.0,
             }
 
@@ -1141,8 +1141,13 @@ class Testplan:
     ):
         """Provides a summary for testplan results.
 
-        Provides an array with an URL to simulation results, passing tests,
-        total number of tests, and percentage of succeeding tests.
+        Provides an array with:
+        * an URL to simulation results,
+        * passing tests,
+        * implemented tests,
+        * total number of tests
+        * implementation progress
+        * percentage of succeeding tests.
         """
         sim_results = Testplan._parse_hjson(sim_results_file)
         test_results_ = sim_results.get("test_results", [])
@@ -1178,6 +1183,7 @@ class Testplan:
             link,
             passing,
             total,
+            progress["total"],
             self._get_percentage(progress["passing"], progress["total"]),
             self._get_percentage(passing, total),
         ]
