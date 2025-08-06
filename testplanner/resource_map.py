@@ -8,7 +8,7 @@ Class parsing the resource mapping files for testplanner.
 
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import yaml
 from jinja2 import Template
@@ -56,6 +56,7 @@ class ResourceMap:
         testpoint: Optional[str] = None,
         test: Optional[str] = None,
         testplan_file: Optional[str] = None,
+        custom_data: Optional[Any] = None,
     ):
         """
         Resets the search.
@@ -68,6 +69,7 @@ class ResourceMap:
         self.regex_groups = {}
         self.result = None
         self.resource_type = resource_type
+        self.custom_data = custom_data
 
     def resolve_template(self, template: str):
         """
@@ -81,6 +83,7 @@ class ResourceMap:
             testplan_file=self.testplan_file,
             test_source=self.test_source,
             regex_groups=self.regex_groups,
+            custom_data=self.custom_data,
         )
 
     def template_match(self, regex_template: str, string: str):
@@ -171,6 +174,7 @@ class ResourceMap:
         testpoint: Optional[str] = None,
         test: Optional[str] = None,
         expected_levels: Optional[List[str]] = None,
+        custom_data: Optional[Any] = None,
     ) -> Optional[str]:
         """
         Retrieves resource from resource mapping, if present.
@@ -192,13 +196,17 @@ class ResourceMap:
             The found resource will be picked only if it is found in
             expected_levels (e.g. `["testpoints", "tests"]` will only
             select resources from those levels).
+        custom_data: Optional[Any]
+            Additional custom data to be delivered to templating context.
 
         Returns
         -------
         Optional[str]:
             Resource or None if not found
         """
-        self.prepare(resource_type, testplan, testpoint, test, testplan_file)
+        self.prepare(
+            resource_type, testplan, testpoint, test, testplan_file, custom_data
+        )
         assert self.resource_type not in TESTPLAN_KEYWORDS, (
             f"resource_type cannot be one of {TESTPLAN_KEYWORDS}"
         )
