@@ -960,7 +960,7 @@ class Testplan:
         stages = list(set([key for key in self.progress.keys()]))
         if len(stages) == 1 and stages[0] == "N.A.":
             skip_stage = True
-        for key in self.progress:
+        for key in sorted(self.progress.keys()):
             stat = self.progress[key]
             values = [v for v in stat.values()]
             if not header:
