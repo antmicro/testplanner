@@ -963,6 +963,8 @@ class Testplan:
         for key in sorted(self.progress.keys()):
             stat = self.progress[key]
             values = [v for v in stat.values()]
+            if self.progress[key]["total"] == 0:
+                continue
             if not header:
                 header = ([] if skip_stage else ["Stage"]) + [
                     k.capitalize() for k in stat
