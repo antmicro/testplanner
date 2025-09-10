@@ -918,9 +918,9 @@ class Testplan:
                     if "html" in format:
                         file_fmt = tr.file
                         if tr.lineno is not None:
-                            file_fmt += f"#L{tr.lineno})"
+                            file_fmt += f"#L{tr.lineno}"
                         test_name = (
-                            f"<a href={self.source_url_prefix}/{tr.file}>{tr.name}</a>"
+                            f"<a href={self.source_url_prefix}/{file_fmt}>{tr.name}</a>"
                         )
                     else:
                         test_name = f"[{tr.name}]({self.source_url_prefix}/{tr.file}"
