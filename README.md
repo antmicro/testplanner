@@ -115,6 +115,8 @@ Each entry in `test_results` consists of:
 * `name` - name of the test. It needs to match the name of the test in `tests` list in testpoints to properly associate the test's result with its definition in testplans.
 * `file` (optional) - path to the implementation of the test
 * `lineno` (optional) - line number within `file` where test is implemented
+* `passing_logs` (optional) - list of URLs to logs holding passed tests
+* `failing_logs` (optional) - list of URLs to logs holding passed tests
 
 Test results can be provided with `-os` flag of `testplanner`.
 

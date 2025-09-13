@@ -68,6 +68,20 @@ def parse_repo_data(repo_name, repo_path):
     return repo, branch, sha
 
 
+def render_log_entry(number: int, log_url, format: str, passing: bool):
+    if "html" in format:
+        return f"""
+        <a href="{log_url}" class="button tooltip">
+            <img src="assets/file.svg" alt="Pass #{number}" class="{"log-passing" if passing else "log-failing"}" style="transform: scale(1.25) translatey(1px);"/>
+            <span class="tooltip-text">Go to {"passing" if passing else "failing"} log #{number}</span>
+        </a>
+        """  # noqa: E501
+    else:
+        return (
+            f"* [{'Passing log' if passing else 'Failing log'} #{number}]({log_url})\n"
+        )
+
+
 class Result:
     """The results for a single test"""
 
@@ -80,6 +94,8 @@ class Result:
         simulated_time=None,
         file=None,
         lineno=None,
+        passing_logs=None,
+        failing_logs=None,
     ):
         self.name = name
         self.passing = passing
@@ -89,6 +105,8 @@ class Result:
         self.mapped = False
         self.file = file
         self.lineno = lineno
+        self.passing_logs = passing_logs if passing_logs else []
+        self.failing_logs = failing_logs if failing_logs else []
 
 
 class Element:
@@ -887,15 +905,25 @@ class Testplan:
             "Pass Rate",
         ]
         stages = set()
+        has_logs = False
         for tp in self.testpoints:
             stage = "" if tp.stage == "N.A." else tp.stage
             stages.add(stage)
+            for tr in tp.test_results:
+                if tr.passing_logs or tr.failing_logs:
+                    has_logs = True
         skip_stages = False
         if len(stages) > 1 or list(stages)[0] != "":
             header = ["Stage"] + header
         else:
             skip_stages = True
-        colalign = ("center",) * (1 if skip_stages else 2) + ("left",) + ("center",) * 5
+        if has_logs:
+            header.append("Logs")
+        colalign = (
+            ("center",) * (1 if skip_stages else 2)
+            + ("left",)
+            + ("center",) * (5 + has_logs)
+        )
         table = []
         for tp in self.testpoints:
             stage = "" if tp.stage == "N.A." else tp.stage
@@ -928,6 +956,14 @@ class Testplan:
                             test_name += f"#L{tr.lineno})"
                         else:
                             test_name += ")"
+                logs = ""
+                if has_logs:
+                    for i, passing_log in enumerate(tr.passing_logs):
+                        logs += render_log_entry(i, passing_log, format, True)
+
+                    for i, failing_log in enumerate(tr.failing_logs):
+                        logs += render_log_entry(i, failing_log, format, False)
+
                 table.append(
                     ([stage] if not skip_stages else [])
                     + [
@@ -939,6 +975,7 @@ class Testplan:
                         tr.total,
                         pass_rate,
                     ]
+                    + ([logs] if has_logs else [])
                 )
                 stage = ""
                 tp_name = ""
@@ -1059,6 +1096,8 @@ class Testplan:
                     job_runtime=item.get("job_runtime", None),
                     file=item.get("file", None),
                     lineno=item.get("lineno", None),
+                    passing_logs=item.get("passing_logs", []),
+                    failing_logs=item.get("failing_logs", []),
                 )
                 test_results.append(tr)
             except KeyError as e:
