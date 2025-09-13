@@ -112,8 +112,16 @@ td {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.table-wrapper > table tr:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
 td > b {
   font-weight: bold;
+}
+
+tr:has(b) {
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 /* Enable border on all centered tables aside from the info table */
