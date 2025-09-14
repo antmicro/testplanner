@@ -97,6 +97,7 @@ class Result:
         lineno=None,
         passing_logs=None,
         failing_logs=None,
+        additional_sources=None,
     ):
         self.name = name
         self.passing = passing
@@ -108,6 +109,7 @@ class Result:
         self.lineno = lineno
         self.passing_logs = passing_logs if passing_logs else []
         self.failing_logs = failing_logs if failing_logs else []
+        self.additional_sources = additional_sources if additional_sources else {}
 
 
 class Element:
@@ -1003,6 +1005,18 @@ class Testplan:
                     for i, failing_log in enumerate(tr.failing_logs):
                         logs += render_log_entry(i, failing_log, format, False)
 
+                # TODO add support for markdown
+                if "html" in format and tr.additional_sources:
+                    if tr.additional_sources:
+                        test_name += '<br/><div class="additional-sources">'
+                        test_name += " | ".join(
+                            [
+                                f"<a href={self.source_url_prefix}/{v}>{k}</a>"
+                                for k, v in tr.additional_sources.items()
+                            ]
+                        )
+                        test_name += "</div>"
+
                 # for now comments will only work in HTML
                 if "html" in format and self.comments:
                     comment = (
@@ -1188,6 +1202,7 @@ class Testplan:
                     lineno=item.get("lineno", None),
                     passing_logs=item.get("passing_logs", []),
                     failing_logs=item.get("failing_logs", []),
+                    additional_sources=item.get("additional_sources", {}),
                 )
                 test_results.append(tr)
             except KeyError as e:

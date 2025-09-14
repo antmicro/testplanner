@@ -182,3 +182,7 @@
 .log-failing {
     filter: brightness(0) saturate(100%) invert(61%) sepia(84%) saturate(3794%) hue-rotate(352deg) brightness(100%) contrast(96%);
 }
+
+.additional-sources {
+    font-size: 0.5rem;
+}
