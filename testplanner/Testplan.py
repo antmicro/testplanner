@@ -936,8 +936,13 @@ class Testplan:
             tp_name = "" if tp.name == "N.A." else tp.name
             # for now comments will only work in HTML
             if "html" in format and tp_name != "":
+                comment = None
                 if self.comments:
-                    comment = self.comments.get(PurePath(self.filename).stem, {}).get("testpoint_comments", {}).get(tp_name, None)
+                    comment = (
+                        self.comments.get(PurePath(self.filename).stem, {})
+                        .get("testpoint_comments", {})
+                        .get(tp_name, None)
+                    )
                 tp_name = f"<span title='{tp.desc}'>{tp_name}<span>"
                 if comment:
                     tp_name += f'<br/><span class="comment">{comment}</span>'
@@ -979,7 +984,11 @@ class Testplan:
 
                 # for now comments will only work in HTML
                 if "html" in format and self.comments:
-                    comment = self.comments.get(PurePath(self.filename).stem, {}).get("test_comments", {}).get(tr.name, None)
+                    comment = (
+                        self.comments.get(PurePath(self.filename).stem, {})
+                        .get("test_comments", {})
+                        .get(tr.name, None)
+                    )
                     if comment:
                         test_name += f'<br/><span class="comment">{comment}</span>'
 
@@ -1002,9 +1011,12 @@ class Testplan:
         # for now comments will only work in HTML
         if "html" in format:
             text = "\n<h3> Test Results\n </h3>"
-            comment = self.comments.get(PurePath(self.filename).stem, {}).get("general_comment", None)
-            if comment:
-                text += f'<p class="comment">{comment}</p>'
+            if self.comments:
+                comment = self.comments.get(PurePath(self.filename).stem, {}).get(
+                    "general_comment", None
+                )
+                if comment:
+                    text += f'<p class="comment">{comment}</p>'
 
         else:
             text = "\n### Test Results\n"
