@@ -928,6 +928,8 @@ class Testplan:
         for tp in self.testpoints:
             stage = "" if tp.stage == "N.A." else tp.stage
             tp_name = "" if tp.name == "N.A." else tp.name
+            if "html" in format and tp_name != "":
+                tp_name = f"<span title='{tp.desc}'>{tp_name}<span>"
             for tr in tp.test_results:
                 if tr.total == 0 and not map_full_testplan:
                     continue
