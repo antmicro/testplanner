@@ -10,7 +10,7 @@ import re
 import sys
 from collections import defaultdict
 from importlib.resources import path
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Optional, TextIO, Union
 
 import git
@@ -392,6 +392,7 @@ class Testplan:
         resource_map_data=None,
         source_url_prefix="",
         docs_url_prefix="",
+        comments_file=None,
     ):
         """Initialize the testplan.
 
@@ -412,6 +413,11 @@ class Testplan:
         self.repo_top = repo_top
         self.source_url_prefix = source_url_prefix
         self.docs_url_prefix = docs_url_prefix.rstrip("/")
+
+        if comments_file and Path(comments_file).exists():
+            self.comments = Testplan._parse_hjson(comments_file)
+        else:
+            self.comments = None
 
         # Split the filename into filename and tags, if provided.
         split = str(filename).split(":")
@@ -965,6 +971,12 @@ class Testplan:
 
                     for i, failing_log in enumerate(tr.failing_logs):
                         logs += render_log_entry(i, failing_log, format, False)
+
+                # for now comments will only work in HTML
+                if "html" in format and self.comments:
+                    comment = self.comments.get(PurePath(self.filename).stem, {}).get(tr.name, None)
+                    if comment:
+                        test_name += f'<br/><span class="comment">{comment}</span>'
 
                 table.append(
                     ([stage] if not skip_stages else [])

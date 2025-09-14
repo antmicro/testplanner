@@ -123,6 +123,11 @@ def main():
         type=Path,
     )
     parser.add_argument(
+        "--comments-file",
+        help="Path to the file with external comments to be added to testplans",
+        type=Path,
+    )
+    parser.add_argument(
         "--source-url-prefix",
         help="Prefix for URLs to sources in generated files",
     )
@@ -240,6 +245,7 @@ def main():
             resource_map_data=resource_map_data,
             source_url_prefix=source_url_prefix,
             docs_url_prefix=docs_url_prefix,
+            comments_file=args.comments_file,
         )
 
         sim_result = None
