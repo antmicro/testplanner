@@ -934,8 +934,13 @@ class Testplan:
         for tp in self.testpoints:
             stage = "" if tp.stage == "N.A." else tp.stage
             tp_name = "" if tp.name == "N.A." else tp.name
+            # for now comments will only work in HTML
             if "html" in format and tp_name != "":
+                if self.comments:
+                    comment = self.comments.get(PurePath(self.filename).stem, {}).get("testpoint_comments", {}).get(tp_name, None)
                 tp_name = f"<span title='{tp.desc}'>{tp_name}<span>"
+                if comment:
+                    tp_name += f'<br/><span class="comment">{comment}</span>'
             for tr in tp.test_results:
                 if tr.total == 0 and not map_full_testplan:
                     continue
@@ -974,7 +979,7 @@ class Testplan:
 
                 # for now comments will only work in HTML
                 if "html" in format and self.comments:
-                    comment = self.comments.get(PurePath(self.filename).stem, {}).get(tr.name, None)
+                    comment = self.comments.get(PurePath(self.filename).stem, {}).get("test_comments", {}).get(tr.name, None)
                     if comment:
                         test_name += f'<br/><span class="comment">{comment}</span>'
 
@@ -994,8 +999,13 @@ class Testplan:
                 stage = ""
                 tp_name = ""
 
+        # for now comments will only work in HTML
         if "html" in format:
             text = "\n<h3> Test Results\n </h3>"
+            comment = self.comments.get(PurePath(self.filename).stem, {}).get("general_comment", None)
+            if comment:
+                text += f'<p class="comment">{comment}</p>'
+
         else:
             text = "\n### Test Results\n"
         text += tabulate(table, headers=header, tablefmt=format, colalign=colalign)

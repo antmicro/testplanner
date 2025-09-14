@@ -129,6 +129,11 @@ td span.comment {
   color: rgba(255, 255, 255, 0.6);
 }
 
+h3 ~ p.comment {
+  text-align: left;
+  padding-bottom: 20px;
+}
+
 /* Enable border on all centered tables aside from the info table */
 body > center > table:not(.info-table) td:not(.coverBarOutline) {
   border: none;
