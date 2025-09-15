@@ -365,7 +365,9 @@ class Testplan:
         if total == 0:
             return "-- %"
         perc = value / total * 100 * 1.0
-        return "{0:.2f} %".format(round(perc, 2))
+        if perc == 100:
+            return "100 %"
+        return "{0:.1f} %".format(round(perc, 2))
 
     @staticmethod
     def get_dv_style_css():
