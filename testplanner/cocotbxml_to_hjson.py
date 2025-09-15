@@ -52,7 +52,7 @@ def main():
     )
     parser.add_argument(
         "--tests-ignore-dirs",
-        help="Directories to ignore when searching for sources, relative to --tests-base-dir",  # noqa: E501
+        help="Directories to ignore when searching for sources, relative to --tests-base-dir",
         nargs="+",
         type=Path,
     )
@@ -92,7 +92,7 @@ def main():
                 tname = matched.group(1)
             if tname in test_names_to_entries:
                 logging.info(
-                    f"Test name '{tname}' reappears in test results in {resultspath}, previously in {test_names_to_entries[tname]['xmlpath'][-1]}"  # noqa: E501
+                    f"Test name '{tname}' reappears in test results in {resultspath}, previously in {test_names_to_entries[tname]['xmlpath'][-1]}"
                 )
                 test_names_to_entries[tname]["skipped"] += len(
                     testcase.findall("skipped")
@@ -153,7 +153,7 @@ def main():
                             tests_stats[test]["lineno"] = tdata["lineno"]
                     else:
                         logging.warning(
-                            f'Path in XML test "{tdata["file"]}" is outside "{test_root_dir.resolve()}"'  # noqa: E501
+                            f'Path in XML test "{tdata["file"]}" is outside "{test_root_dir.resolve()}"'
                         )
         out_hjson = {
             "timestamp": datetime.now().strftime("%D/%M/%Y %H:%M"),

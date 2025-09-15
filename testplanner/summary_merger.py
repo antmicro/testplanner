@@ -78,7 +78,7 @@ def main():
         "-r",
         "--replace-links",
         # action="store_true",
-        help="Attempt to remap links from other sources in the destination directory tree",  # noqa: E501
+        help="Attempt to remap links from other sources in the destination directory tree",
     )
     args = parser.parse_args()
 

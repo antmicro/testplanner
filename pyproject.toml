@@ -38,6 +38,10 @@ select = [
     "RUF100", # disallowed unnecessary noqa
 ]
 
+ignore = [
+    "E501",   # remove line length limit
+]
+
 [project.optional-dependencies]
 xls = [
     "openpyxl"

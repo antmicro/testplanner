@@ -75,7 +75,7 @@ def render_log_entry(number: int, log_url, format: str, passing: bool):
             <img src="assets/file.svg" alt="Pass #{number}" class="{"log-passing" if passing else "log-failing"}" style="transform: scale(1.25) translatey(1px);"/>
             <span class="tooltip-text">Go to {"passing" if passing else "failing"} log #{number}</span>
         </a>
-        """  # noqa: E501
+        """
     else:
         return (
             f"* [{'Passing log' if passing else 'Failing log'} #{number}]({log_url})\n"
@@ -590,7 +590,7 @@ class Testplan:
                 # rest of the description and should be separate from
                 # structured data.
                 headers = {
-                    # Removed since it's not that simple to dedcide where it should be mapped to   # noqa: E501
+                    # Removed since it's not that simple to dedcide where it should be mapped to
                     "Testbench": "testbench",
                     "Intent": "intent",
                     "Stimulus": "stimulus_procedure",
@@ -678,11 +678,11 @@ class Testplan:
                 os.path.dirname(output.name),
             )
             output.write(
-                f":::{{figure-md}} {self.name.lower().replace(' ', '-')}-testbench-diagram\n"  # noqa: E501
+                f":::{{figure-md}} {self.name.lower().replace(' ', '-')}-testbench-diagram\n"
             )
             output.write(f"![{self.name}]({diagram_rel_path})\n\n")
             output.write(
-                f"{self.name} UVM testbench diagram with static and dynamic components\n"  # noqa: E501
+                f"{self.name} UVM testbench diagram with static and dynamic components\n"
             )
             output.write(":::\n")
 
@@ -691,14 +691,14 @@ class Testplan:
             if source is not None:
                 candidatepaths = sorted(self.repo_top.resolve().glob(source))
                 assert len(candidatepaths) <= 1, (
-                    f"Multiple source files assigned to testplan {self.name}:  {source} {candidatepaths}"  # noqa: E501
+                    f"Multiple source files assigned to testplan {self.name}:  {source} {candidatepaths}"
                 )
                 if len(candidatepaths) == 1:
                     path = candidatepaths[0].relative_to(self.repo_top.resolve())
                     output.write(f"[Source file]({self.source_url_prefix}/{path})\n\n")
                 else:
                     print(
-                        f'Source file for testplan "{self.name}" not found ({self.filename}) (regex: {source})!'  # noqa: E501
+                        f'Source file for testplan "{self.name}" not found ({self.filename}) (regex: {source})!'
                     )
 
         tests_to_urls = {}
@@ -723,7 +723,7 @@ class Testplan:
                 target_sim_results_url_prefix if target_sim_results_url_prefix else "./"
             )
             output.write(
-                f"[Test results]({url_prefix}{os.path.relpath(target_sim_results_path, Path(output.name).parent)}){{.external}}\n\n"  # noqa: E501
+                f"[Test results]({url_prefix}{os.path.relpath(target_sim_results_path, Path(output.name).parent)}){{.external}}\n\n"
             )
 
         output.write("## Testpoints\n\n")
@@ -767,7 +767,7 @@ class Testplan:
             return test_name
         candidatepaths = sorted(self.repo_top.resolve().glob(test_source))
         assert len(candidatepaths) <= 1, (
-            f"Multiple files assigned to test {self.name}/{testpoint_name}/{test_name}:  {test_source} {candidatepaths}"  # noqa: E501
+            f"Multiple files assigned to test {self.name}/{testpoint_name}/{test_name}:  {test_source} {candidatepaths}"
         )
         if len(candidatepaths) == 0:
             return test_name
@@ -1010,9 +1010,7 @@ class Testplan:
                             .get(stage, None)
                         )
                         if comment:
-                            stage_desc += (
-                                f'<br/><span class="comment">{self.linkify(comment)}</span>'
-                            )
+                            stage_desc += f'<br/><span class="comment">{self.linkify(comment)}</span>'
 
                 table.append(
                     ([stage_desc] if not skip_stages else [])
@@ -1277,7 +1275,7 @@ class Testplan:
             total += item.get("total", 0)
             passing += item.get("passing", 0)
         if html_links:
-            link = f"<a href='{os.path.join(path_rel, target_sim_results_path.name)}'>{self.name}</a>"  # noqa: E501
+            link = f"<a href='{os.path.join(path_rel, target_sim_results_path.name)}'>{self.name}</a>"
         else:
             link = (
                 f"[{self.name}]({os.path.join(path_rel, target_sim_results_path.name)})"

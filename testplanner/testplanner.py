@@ -86,7 +86,7 @@ def main():
     parser.add_argument(
         "-ot",
         "--output-testplan",
-        help="Path to output directory for multiple files's output, path to file for single-file output",  # noqa: E501
+        help="Path to output directory for multiple files's output, path to file for single-file output",
         type=Path,
         required=not any([flag in sys.argv for flag in ["--sim-results", "-s"]]),
     )
@@ -97,13 +97,13 @@ def main():
     )
     parser.add_argument(
         "--testplan-spreadsheet-template",
-        help="Path to template XLSX file that should be used to generate spreadsheet with testplan",  # noqa: E501
+        help="Path to template XLSX file that should be used to generate spreadsheet with testplan",
         type=Path,
     )
     parser.add_argument(
         "-os",
         "--output-sim-results",
-        help="Path to output directory for multiple files's output, path to file for single-file output",  # noqa: E501
+        help="Path to output directory for multiple files's output, path to file for single-file output",
         type=Path,
         required=any([flag in sys.argv for flag in ["--sim-results", "-s"]]),
     )
@@ -187,7 +187,7 @@ def main():
         sim_results = [Path(os.path.abspath(s)) for s in args.sim_results]
         if len(sim_results) != len(testplans):
             raise ValueError(
-                "Incorrect number of arguments. Lengths of testplans and sim_results should be equal."  # noqa: E501
+                "Incorrect number of arguments. Lengths of testplans and sim_results should be equal."
             )
         logging.debug(f"sim_results = {sim_results}")
     else:
