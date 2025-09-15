@@ -934,6 +934,7 @@ class Testplan:
             + ("center",) * (5 + has_logs)
         )
         table = []
+        prev_stage = ""
         for tp in self.testpoints:
             stage = "" if tp.stage == "N.A." else tp.stage
             tp_name = "" if tp.name == "N.A." else tp.name
@@ -999,8 +1000,22 @@ class Testplan:
                             f'<br/><span class="comment">{self.linkify(comment)}</span>'
                         )
 
+                stage_desc = ""
+                if not skip_stages and stage != prev_stage:
+                    stage_desc = stage
+                    if "html" in format and self.comments:
+                        comment = (
+                            self.comments.get(PurePath(self.filename).stem, {})
+                            .get("stage_comments", {})
+                            .get(stage, None)
+                        )
+                        if comment:
+                            stage_desc += (
+                                f'<br/><span class="comment">{self.linkify(comment)}</span>'
+                            )
+
                 table.append(
-                    ([stage] if not skip_stages else [])
+                    ([stage_desc] if not skip_stages else [])
                     + [
                         tp_name,
                         test_name,
@@ -1012,6 +1027,7 @@ class Testplan:
                     ]
                     + ([logs] if has_logs else [])
                 )
+                prev_stage = stage
                 stage = ""
                 tp_name = ""
 
