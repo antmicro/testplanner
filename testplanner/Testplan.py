@@ -363,11 +363,11 @@ class Testplan:
     def _get_percentage(value, total):
         """Returns a string representing percentage upto 2 decimal places."""
         if total == 0:
-            return "-- %"
+            return "--%"
         perc = value / total * 100 * 1.0
         if perc == 100:
-            return "100 %"
-        return "{0:.1f} %".format(round(perc, 2))
+            return "100%"
+        return f"{perc}%" if perc.is_integer() else "{0:.1f}%".format(round(perc, 1))
 
     @staticmethod
     def get_dv_style_css():
