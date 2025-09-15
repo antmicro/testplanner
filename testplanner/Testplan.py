@@ -5,6 +5,7 @@
 
 r"""Testpoint and Testplan classes for maintaining the testplan"""
 
+import logging
 import os
 import re
 import sys
@@ -421,6 +422,18 @@ class Testplan:
             self.link_regexes = self.comments.get("link_regexes", [])
             del self.comments["link_regexes"]
 
+            # Compile regexes
+            import re
+
+            self.combined_link_regex = re.compile(
+                f"({'|'.join(r['regex'] for r in self.link_regexes)})"
+            )
+            for r in self.link_regexes:
+                try:
+                    r["regex"] = re.compile(r["regex"])
+                except re.error:
+                    print(f"Error: regex '{r['regex']}' in comment file is invalid.")
+                    sys.exit(1)
         else:
             self.comments = None
 
@@ -1080,18 +1093,19 @@ class Testplan:
 
     def linkify(self, text):
         """Adds links based on regexes in self.link_regexes (originally from comments.hjson)."""
-        import re
 
-        for r in self.link_regexes:
-            text = re.sub(
-                r,
-                r'<a href="'
-                + self.link_regexes[r]["link"]
-                + '">'
-                + self.link_regexes[r]["text"]
-                + "</a>",
-                text,
+        def linkify_single(text):
+            for r in self.link_regexes:
+                text, n = r["regex"].subn(
+                    r'<a href="' + r["link"] + '">' + r["text"] + "</a>", text, 1
+                )
+                if n != 0:
+                    return text
+            logging.warning(
+                f"Matched combined link regex, but failed to replace: {text}"
             )
+
+        text = self.combined_link_regex.sub(lambda m: linkify_single(m.group()), text)
 
         return text
 
