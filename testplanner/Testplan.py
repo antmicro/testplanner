@@ -416,6 +416,9 @@ class Testplan:
 
         if comments_file and Path(comments_file).exists():
             self.comments = Testplan._parse_hjson(comments_file)
+            self.link_regexes = self.comments.get("link_regexes", [])
+            del self.comments["link_regexes"]
+
         else:
             self.comments = None
 
@@ -945,7 +948,9 @@ class Testplan:
                     )
                 tp_name = f"<span title='{tp.desc}'>{tp_name}<span>"
                 if comment:
-                    tp_name += f'<br/><span class="comment">{comment}</span>'
+                    tp_name += (
+                        f'<br/><span class="comment">{self.linkify(comment)}</span>'
+                    )
             for tr in tp.test_results:
                 if tr.total == 0 and not map_full_testplan:
                     continue
@@ -990,7 +995,9 @@ class Testplan:
                         .get(tr.name, None)
                     )
                     if comment:
-                        test_name += f'<br/><span class="comment">{comment}</span>'
+                        test_name += (
+                            f'<br/><span class="comment">{self.linkify(comment)}</span>'
+                        )
 
                 table.append(
                     ([stage] if not skip_stages else [])
@@ -1016,7 +1023,7 @@ class Testplan:
                     "general_comment", None
                 )
                 if comment:
-                    text += f'<p class="comment">{comment}</p>'
+                    text += f'<p class="comment">{self.linkify(comment)}</p>'
 
         else:
             text = "\n### Test Results\n"
@@ -1053,6 +1060,23 @@ class Testplan:
         colalign = ("center",) * len(header)
         text += tabulate(table, headers=header, tablefmt=format, colalign=colalign)
         text += "\n"
+        return text
+
+    def linkify(self, text):
+        """Adds links based on regexes in self.link_regexes (originally from comments.hjson)."""
+        import re
+
+        for r in self.link_regexes:
+            text = re.sub(
+                r,
+                r'<a href="'
+                + self.link_regexes[r]["link"]
+                + '">'
+                + self.link_regexes[r]["text"]
+                + "</a>",
+                text,
+            )
+
         return text
 
     @staticmethod
