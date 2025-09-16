@@ -11,7 +11,7 @@ import re
 import sys
 from collections import defaultdict
 from importlib.resources import path
-from pathlib import Path, PurePath
+from pathlib import Path
 from typing import Optional, TextIO, Union
 
 import git
@@ -397,7 +397,7 @@ class Testplan:
         resource_map_data=None,
         source_url_prefix="",
         docs_url_prefix="",
-        comments_file=None,
+        comments=None,
     ):
         """Initialize the testplan.
 
@@ -418,26 +418,7 @@ class Testplan:
         self.repo_top = repo_top
         self.source_url_prefix = source_url_prefix
         self.docs_url_prefix = docs_url_prefix.rstrip("/")
-
-        if comments_file and Path(comments_file).exists():
-            self.comments = Testplan._parse_hjson(comments_file)
-            self.link_regexes = self.comments.get("link_regexes", [])
-            del self.comments["link_regexes"]
-
-            # Compile regexes
-            import re
-
-            self.combined_link_regex = re.compile(
-                f"({'|'.join(r['regex'] for r in self.link_regexes)})"
-            )
-            for r in self.link_regexes:
-                try:
-                    r["regex"] = re.compile(r["regex"])
-                except re.error:
-                    print(f"Error: regex '{r['regex']}' in comment file is invalid.")
-                    sys.exit(1)
-        else:
-            self.comments = None
+        self.comments = comments
 
         # Split the filename into filename and tags, if provided.
         split = str(filename).split(":")
@@ -957,20 +938,13 @@ class Testplan:
             tp_name = "" if tp.name == "N.A." else tp.name
             is_new_stage = stage != prev_stage
             prev_stage = stage
-            # for now comments will only work in HTML
             if "html" in format and tp_name != "":
-                comment = None
+                tp_text = f"<span title='{tp.desc}'>{tp_name}<span>"
+                # for now comments will only work in HTML
                 if self.comments:
-                    comment = (
-                        self.comments.get(PurePath(self.filename).stem, {})
-                        .get("testpoint_comments", {})
-                        .get(tp_name, None)
-                    )
-                tp_name = f"<span title='{tp.desc}'>{tp_name}<span>"
-                if comment:
-                    tp_name += (
-                        f'<br/><span class="comment">{self.linkify(comment)}</span>'
-                    )
+                    tp_text += self.comments.comment_testpoint(self.filename, tp_name)
+                tp_name = tp_text
+
             for tr in tp.test_results:
                 if tr.total == 0 and not map_full_testplan:
                     continue
@@ -1021,31 +995,18 @@ class Testplan:
 
                 # for now comments will only work in HTML
                 if "html" in format and self.comments:
-                    comment = (
-                        self.comments.get(PurePath(self.filename).stem, {})
-                        .get("test_comments", {})
-                        .get(tr.name, None)
-                    )
-                    if comment:
-                        test_name += (
-                            f'<br/><span class="comment">{self.linkify(comment)}</span>'
-                        )
+                    test_name += self.comments.comment_test(self.filename, tr.name)
 
-                stage_desc = ""
+                stage_text = ""
                 if not skip_stages and is_new_stage:
                     is_new_stage = False
-                    stage_desc = stage
+                    stage_text = stage
+                    # for now comments will only work in HTML
                     if "html" in format and self.comments:
-                        comment = (
-                            self.comments.get(PurePath(self.filename).stem, {})
-                            .get("stage_comments", {})
-                            .get(stage, None)
-                        )
-                        if comment:
-                            stage_desc += f'<br/><span class="comment">{self.linkify(comment)}</span>'
+                        stage_text += self.comments.comment_stage(self.filename, stage)
 
                 table.append(
-                    ([stage_desc] if not skip_stages else [])
+                    ([stage_text] if not skip_stages else [])
                     + [
                         tp_name,
                         test_name,
@@ -1064,11 +1025,7 @@ class Testplan:
         if "html" in format:
             text = "\n<h3> Test Results\n </h3>"
             if self.comments:
-                comment = self.comments.get(PurePath(self.filename).stem, {}).get(
-                    "general_comment", None
-                )
-                if comment:
-                    text += f'<p class="comment">{self.linkify(comment)}</p>'
+                text += self.comments.comment_testplan(self.filename)
 
         else:
             text = "\n### Test Results\n"

@@ -15,6 +15,7 @@ from shutil import copy2, copytree
 import yaml
 from tabulate import tabulate
 
+from testplanner.Comments import Comments
 from testplanner.Testplan import Testplan, parse_repo_data
 
 STYLES_DIR = Path(Path(__file__).parent.resolve() / "template")
@@ -212,6 +213,10 @@ def main():
 
     tests_summary = []
 
+    comments = None
+    if args.comments_file and Path(args.comments_file).exists():
+        comments = Comments(args.comments_file)
+
     if args.testplan_spreadsheet:
         from shutil import copyfile
 
@@ -245,7 +250,7 @@ def main():
             resource_map_data=resource_map_data,
             source_url_prefix=source_url_prefix,
             docs_url_prefix=docs_url_prefix,
-            comments_file=args.comments_file,
+            comments=comments,
         )
 
         sim_result = None
@@ -325,6 +330,9 @@ def main():
         if args.output_summary.suffix == ".html":
             sum_title = f"<h3> {args.output_summary_title}\n </h3>\n"
             summary = ""
+            # for now comments will only work in HTML
+            if comments:
+                summary += comments.comment_summary()
             tablefmt = "unsafehtml"
         else:
             summary = f"# {args.output_summary_title}\n\n"
