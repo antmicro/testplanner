@@ -35,6 +35,10 @@
       BlinkMacSystemFont,
       "Segoe UI",
       sans-serif;
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
   }
 
   .container-title > h3 {
