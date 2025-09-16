@@ -9,6 +9,7 @@ import argparse
 import logging
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 from shutil import copy2, copytree
 
@@ -346,6 +347,7 @@ def main():
                 data = {
                     "title": sum_title,
                     "test_results_table": summary,
+                    "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M"),
                 }
                 if args.project_root:
                     data["git_repo"], data["git_branch"], data["git_sha"] = (
