@@ -955,6 +955,8 @@ class Testplan:
         for tp in self.testpoints:
             stage = "" if tp.stage == "N.A." else tp.stage
             tp_name = "" if tp.name == "N.A." else tp.name
+            is_new_stage = stage != prev_stage
+            prev_stage = stage
             # for now comments will only work in HTML
             if "html" in format and tp_name != "":
                 comment = None
@@ -1030,7 +1032,8 @@ class Testplan:
                         )
 
                 stage_desc = ""
-                if not skip_stages and stage != prev_stage:
+                if not skip_stages and is_new_stage:
+                    is_new_stage = False
                     stage_desc = stage
                     if "html" in format and self.comments:
                         comment = (
@@ -1054,7 +1057,6 @@ class Testplan:
                     ]
                     + ([logs] if has_logs else [])
                 )
-                prev_stage = stage
                 stage = ""
                 tp_name = ""
 
