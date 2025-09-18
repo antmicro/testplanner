@@ -13,6 +13,7 @@ from collections import defaultdict
 from importlib.resources import path
 from pathlib import Path
 from typing import Optional, TextIO, Union
+from urllib.parse import quote
 
 import git
 import hjson
@@ -53,7 +54,9 @@ def format_time(time: Optional[Union[int, float, str]]) -> str:
         return time
 
 
-def parse_repo_data(repo_name, repo_path):
+def parse_repo_data(
+    repo_name, repo_path, repo_url, git_branch_prefix, git_commit_prefix
+):
     repo = git.Repo(repo_path)
     sha = repo.head.commit.hexsha[:8]
     branch = None
@@ -72,11 +75,31 @@ def parse_repo_data(repo_name, repo_path):
             branch = repo.active_branch.name
     except TypeError:
         pass
-    if repo_name:
-        repo = repo_name
-    else:
-        repo = repo.working_tree_dir.split("/")[-1]
-    return repo, branch, sha
+
+    if not repo_name:
+        repo_name = repo.working_tree_dir.split("/")[-1]
+
+    if not repo_url:
+        return repo_name, branch, sha
+
+    if git_branch_prefix and git_branch_prefix in repo_url:
+        repo_url = repo_url.split(git_branch_prefix)[0]
+    elif git_commit_prefix and git_commit_prefix in repo_url:
+        repo_url = repo_url.split(git_commit_prefix)[0]
+
+    if branch:
+        branch_url = f"{repo_url}{git_branch_prefix}/{quote(branch)}"
+    commit_url = f"{repo_url}{git_commit_prefix}/{quote(sha)}"
+
+    return (
+        f'<a target="_blank" href="{repo_url}">{repo_name}</a>',
+        f'<a target="_blank" href="{branch_url}">{branch}</a>'
+        if branch and (git_branch_prefix is not None)
+        else branch,
+        f'<a target="_blank" href="{commit_url}">{sha}</a>'
+        if git_commit_prefix is not None
+        else sha,
+    )
 
 
 def render_log_entry(number: int, log_url, format: str, passing: bool):
@@ -397,6 +420,8 @@ class Testplan:
         diagram_path=None,
         resource_map_data=None,
         source_url_prefix="",
+        git_branch_prefix="",
+        git_commit_prefix="",
         docs_url_prefix="",
         comments=None,
     ):
@@ -418,6 +443,8 @@ class Testplan:
         self.resource_map = ResourceMap(resource_map_data)
         self.repo_top = repo_top
         self.source_url_prefix = source_url_prefix
+        self.git_branch_prefix = git_branch_prefix
+        self.git_commit_prefix = git_commit_prefix
         self.docs_url_prefix = docs_url_prefix.rstrip("/")
         self.comments = comments
 
@@ -1230,7 +1257,11 @@ class Testplan:
         }
         if repo_path:
             data["git_repo"], data["git_branch"], data["git_sha"] = parse_repo_data(
-                repo_name, repo_path
+                repo_name,
+                repo_path,
+                self.source_url_prefix,
+                self.git_branch_prefix,
+                self.git_commit_prefix,
             )
         return Testplan.render_template(data)
 

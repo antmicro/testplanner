@@ -61,6 +61,12 @@ def main():
 
     You should always set the <output_dir> explicitly.
     """
+
+    def none_or_str(s):
+        if s in ("None", "none"):
+            return None
+        return s
+
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -134,6 +140,18 @@ def main():
         help="Prefix for URLs to sources in generated files",
     )
     parser.add_argument(
+        "--git-url-branch-prefix",
+        help="Prefix for source URLs to branch URLs in the git host",
+        type=none_or_str,
+        default="/tree",
+    )
+    parser.add_argument(
+        "--git-url-commit-prefix",
+        help="Prefix for source URLs to commit URLs in the git host",
+        type=none_or_str,
+        default="/commit",
+    )
+    parser.add_argument(
         "--docs-url-prefix",
         help="Prefix for URLs to documentation in generated files",
     )
@@ -172,6 +190,9 @@ def main():
     # Basic logging
     level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(level=level)
+
+    git_branch_prefix = args.git_url_branch_prefix
+    git_commit_prefix = args.git_url_commit_prefix
 
     # Process args
     logging.debug("Args:")
@@ -252,6 +273,8 @@ def main():
             repo_top=repo_root,
             resource_map_data=resource_map_data,
             source_url_prefix=source_url_prefix,
+            git_branch_prefix=git_branch_prefix,
+            git_commit_prefix=git_commit_prefix,
             docs_url_prefix=docs_url_prefix,
             comments=comments,
         )
@@ -396,7 +419,13 @@ def main():
                 }
                 if args.project_root:
                     data["git_repo"], data["git_branch"], data["git_sha"] = (
-                        parse_repo_data(args.repository_name, args.project_root)
+                        parse_repo_data(
+                            args.repository_name,
+                            args.project_root,
+                            source_url_prefix,
+                            git_branch_prefix,
+                            git_commit_prefix,
+                        )
                     )
                 f.write(Testplan.render_template(data))
             else:
