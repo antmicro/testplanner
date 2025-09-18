@@ -17,7 +17,7 @@ import yaml
 from tabulate import tabulate
 
 from testplanner.Comments import Comments
-from testplanner.Testplan import Testplan, parse_repo_data
+from testplanner.Testplan import Testplan, get_percentage, parse_repo_data
 
 STYLES_DIR = Path(Path(__file__).parent.resolve() / "template")
 ASSETS_DIR = Path(Path(__file__).parent.resolve() / "template/assets")
@@ -230,6 +230,8 @@ def main():
         copyfile(template_path, args.testplan_spreadsheet)
         xls = XLSX_writer(args.testplan_spreadsheet)
 
+    stages_progress = None
+
     # Process testplans
     for id, testplan in enumerate(testplans):
         logging.debug("Processing:")
@@ -315,6 +317,9 @@ def main():
                     html_links=args.output_summary.suffix == ".html",
                 )
             )
+            stages_progress = testplan_obj.update_stages_progress(
+                sim_result, stages_progress
+            )
         if output_sim_results and args.testplan_spreadsheet:
             testplan_obj.generate_xls_sim_results(xls)
 
@@ -341,12 +346,52 @@ def main():
         summary += tabulate(
             tests_summary, headers=header, tablefmt=tablefmt, colalign=colalign
         )
-        summary += "\n"
+        summary += "\n\n"
+
+        header_stages = [
+            "Stage",
+            "Passing tests",
+            "Implemented tests",
+            "Planned tests",
+            "Implementation progress",
+            "Pass Rate",
+        ]
+
+        colalign = ["center"] + 5 * ["right"]
+
+        stages_summary = ""
+        if args.output_summary.suffix == ".html":
+            stages_summary += "<h3>Progress of stages</h3>\n"
+            tablefmt = "unsafehtml"
+        else:
+            stages_summary += "## Progress of stages\n\n"
+            tablefmt = "pipe"
+        stages_summary += "\n\n"
+        stages_table = []
+        for stage in sorted(stages_progress.keys()):
+            results = stages_progress[stage]
+            impl_progress = get_percentage(results["written"], results["total"])
+            pass_rate = get_percentage(results["passing"], results["written"])
+            stages_table.append(
+                [
+                    stage,
+                    results["passing"],
+                    results["written"],
+                    results["total"],
+                    impl_progress,
+                    pass_rate,
+                ]
+            )
+        stages_summary += tabulate(
+            stages_table, headers=header_stages, tablefmt=tablefmt, colalign=colalign
+        )
+        stages_summary += "\n\n"
         with args.output_summary.open("w") as f:
             if args.output_summary.suffix == ".html":
                 data = {
                     "title": sum_title,
                     "test_results_table": summary,
+                    "progress_table": stages_summary,
                     "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M"),
                 }
                 if args.project_root:

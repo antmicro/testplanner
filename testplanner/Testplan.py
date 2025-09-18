@@ -1215,11 +1215,12 @@ class Testplan:
             summary_url = ""
         doc_url = self.get_testplan_doc_url()
 
+        progress_table = self.get_progress_table(format="unsafehtml")
         data = {
             "timestamp": self.timestamp,
             "title": self.name,
+            "progress_table": progress_table,
             "test_results_table": self.get_test_results_table(format="unsafehtml"),
-            "progress_table": self.get_progress_table(format="unsafehtml"),
             # This was always empty thus far, leaving it here but it's not
             # templated in any way
             "cov_results": Testplan.get_cov_results_table(self.cov_results),
@@ -1302,6 +1303,42 @@ class Testplan:
             get_percentage(progress["passing"], progress["total"]),
             get_percentage(passing, total),
         ]
+
+    def update_stages_progress(
+        self,
+        sim_results_file,
+        stages_progress=None,
+    ) -> dict[str, dict[str, int]]:
+        """
+        Provides information on implemented, passing and total tests per stage.
+        """
+        tests_seen = set()
+        if stages_progress is None:
+            stages_progress = defaultdict(
+                lambda: {"passing": 0, "written": 0, "total": 0}
+            )
+        for tp in self.testpoints:
+            stage = tp.stage
+            for tr in tp.test_results:
+                if not tr:
+                    continue
+
+                # skip dummy entries representing TOTAL rows
+                if tr.name.startswith("<b>TOTAL") or tr.name.startswith("**TOTAL"):
+                    continue
+
+                if tr.name in tests_seen:
+                    continue
+
+                tests_seen.add(tr.name)
+
+                stages_progress[stage]["total"] += 1
+                if tr.total != 0:
+                    if tr.passing == tr.total:
+                        stages_progress[stage]["passing"] += 1
+                    stages_progress[stage]["written"] += 1
+
+        return stages_progress
 
 
 def _merge_dicts(list1, list2, use_list1_for_defaults=True):
