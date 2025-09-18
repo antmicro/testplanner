@@ -23,6 +23,16 @@ import testplanner.template as html_templates
 from testplanner.resource_map import ResourceMap
 
 
+def get_percentage(value, total):
+    """Returns a string representing percentage up to 1 decimal place."""
+    if total == 0:
+        return "--%"
+    perc = value / total * 100 * 1.0
+    if perc == 100:
+        return "100%"
+    return f"{perc}%" if perc.is_integer() else "{0:.1f}%".format(round(perc, 1))
+
+
 def format_time(time: Optional[Union[int, float, str]]) -> str:
     """Formats time provided in simulation results."""
     if time is None:
@@ -363,15 +373,6 @@ class Testplan:
         return items
 
     @staticmethod
-    def _get_percentage(value, total):
-        """Returns a string representing percentage upto 2 decimal places."""
-        if total == 0:
-            return "--%"
-        perc = value / total * 100 * 1.0
-        if perc == 100:
-            return "100%"
-        return f"{perc}%" if perc.is_integer() else "{0:.1f}%".format(round(perc, 1))
-
     @staticmethod
     def get_dv_style_css():
         """Returns text with HTML CSS style for a table."""
@@ -623,7 +624,7 @@ class Testplan:
                         total += 1
                         testplan_str += f"  *{i.name}: {result}\n"
                     testplan_str = (
-                        f"TOTAL: {self._get_percentage(passing, total)}\n\nIndividual test results:\n"
+                        f"TOTAL: {get_percentage(passing, total)}\n\nIndividual test results:\n"
                         + testplan_str
                     )
                     rich_testplan_str = xls.embolden_line(testplan_str, 0)
@@ -869,7 +870,7 @@ class Testplan:
                 self.progress.pop(ms)
                 continue
 
-            stat["progress"] = self._get_percentage(stat["passing"], stat["total"])
+            stat["progress"] = get_percentage(stat["passing"], stat["total"])
 
         self.test_results_mapped = True
 
@@ -897,7 +898,7 @@ class Testplan:
             "total": total,
             "written": written,
             "passing": written,
-            "progress": self._get_percentage(written, total),
+            "progress": get_percentage(written, total),
         }
 
     def get_test_results_table(self, map_full_testplan=True, format="pipe"):
@@ -949,7 +950,7 @@ class Testplan:
             for tr in tp.test_results:
                 if tr.total == 0 and not map_full_testplan:
                     continue
-                pass_rate = self._get_percentage(tr.passing, tr.total)
+                pass_rate = get_percentage(tr.passing, tr.total)
 
                 job_runtime = format_time(tr.job_runtime)
                 simulated_time = format_time(tr.simulated_time)
@@ -1127,7 +1128,7 @@ class Testplan:
         result["Name"] = self.name.upper()
         result["Passing"] = tr.passing
         result["Total"] = tr.total
-        result["Pass Rate"] = self._get_percentage(tr.passing, tr.total)
+        result["Pass Rate"] = get_percentage(tr.passing, tr.total)
         return result
 
     def get_sim_results(
@@ -1298,8 +1299,8 @@ class Testplan:
             passing,
             total,
             progress["total"],
-            self._get_percentage(progress["passing"], progress["total"]),
-            self._get_percentage(passing, total),
+            get_percentage(progress["passing"], progress["total"]),
+            get_percentage(passing, total),
         ]
 
 
