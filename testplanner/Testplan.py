@@ -609,22 +609,23 @@ class Testplan:
             stages.setdefault(tp.stage, list()).append(tp)
         for stage, tps in stages.items():
             for tp in tps[::-1]:
-                if tp.name == "N.A.":
-                    if tp.stage == stage:
-                        if tp.test_results[0].total > 0:
-                            passrate = self._get_percentage(
-                                tp.test_results[0].passing, tp.test_results[0].total
-                            )
-                        else:
-                            passrate = "--%"
-                else:
-                    testplan_str = f"TOTAL: {passrate}\n\nIndividual test results:\n"
+                if tp.name != "N.A.":
+                    testplan_str = ""
+                    total = 0
+                    passing = 0
                     for i in tp.test_results:
                         if i.total > 0:
                             result = "Passed" if i.passing else "FAILED"
+                            if i.passing:
+                                passing += 1
                         else:
                             result = "Not implemented"
+                        total += 1
                         testplan_str += f"  *{i.name}: {result}\n"
+                    testplan_str = (
+                        f"TOTAL: {self._get_percentage(passing, total)}\n\nIndividual test results:\n"
+                        + testplan_str
+                    )
                     rich_testplan_str = xls.embolden_line(testplan_str, 0)
                     if tp.name == "Unmapped tests":
                         # Special handling for when test results contain tests
