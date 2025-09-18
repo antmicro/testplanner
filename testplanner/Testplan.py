@@ -1194,6 +1194,13 @@ class Testplan:
             doc_url = f"{self.docs_url_prefix}/{found_suffix}"
         return doc_url
 
+    def get_testplan_source_url(self):
+        root = Path(self.repo_top).resolve()
+        testplan_repo_path = Path(self.filename).resolve().relative_to(root)
+        if self.source_url_prefix:
+            return f"{self.source_url_prefix}/{testplan_repo_path}"
+        return ""
+
     def sim_results_html(
         self,
         summary_output_path,
@@ -1216,6 +1223,7 @@ class Testplan:
             "cov_results": Testplan.get_cov_results_table(self.cov_results),
             "summary_url": summary_url,
             "documentation_url": doc_url,
+            "testplan_source_url": self.get_testplan_source_url(),
         }
         if repo_path:
             data["git_repo"], data["git_branch"], data["git_sha"] = parse_repo_data(

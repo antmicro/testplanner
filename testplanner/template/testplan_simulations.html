@@ -34,6 +34,15 @@
                     </div>
                     {% endif %}
 
+                    {% if(testplan_source_url) %}
+                    <div class="nav-urls">
+                        <a href="{{ testplan_source_url }}" class="button tooltip">
+                            <img src="assets/code.svg" alt="Source" style="transform: scale(1.25) translatey(1px);"/>
+                            <span class="tooltip-text">Go to testplan source</span>
+                        </a>
+                    </div>
+                    {% endif %}
+
                 </div>
                 {% if(git_repo or git_branch or git_sha  or timestamp) %}
                 <div class="nav-right">
