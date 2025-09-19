@@ -9,15 +9,24 @@ import argparse
 import logging
 import os
 import sys
+from copy import deepcopy
 from datetime import datetime
+from importlib.resources import path as ir_path
 from pathlib import Path
 from shutil import copy2, copytree
 
 import yaml
+from jinja2 import Template
 from tabulate import tabulate
 
+import testplanner.template as html_templates
 from testplanner.Comments import Comments
-from testplanner.Testplan import Testplan, get_percentage, parse_repo_data
+from testplanner.Testplan import (
+    SUMMARY_TOKEN,
+    Testplan,
+    get_percentage,
+    parse_repo_data,
+)
 
 STYLES_DIR = Path(Path(__file__).parent.resolve() / "template")
 ASSETS_DIR = Path(Path(__file__).parent.resolve() / "template/assets")
@@ -173,6 +182,18 @@ def main():
         type=str,
     )
     parser.add_argument(
+        "-t",
+        "--testpoint-summary",
+        help="Path to output HTML/Markdown file containing a list of all testpoints",
+        type=Path,
+    )
+    parser.add_argument(
+        "--testpoint-summary-title",
+        help="Title of the testpoint list",
+        default="List of testpoints",
+        type=str,
+    )
+    parser.add_argument(
         "--repository-name",
         help="Display name for the processed repository",
         type=str,
@@ -234,6 +255,7 @@ def main():
         logging.debug(f"diagram_paths = {diagram_paths.items()}")
 
     tests_summary = []
+    tests_all = []
 
     comments = None
     if args.comments_file and Path(args.comments_file).exists():
@@ -307,9 +329,9 @@ def main():
                 )
                 f.write("\n")
 
+        relative_url = None
         if output_sim_results:
             with open(output_sim_path, "a" if output_sim_results_single else "w") as f:
-                relative_url = None
                 if args.output_summary:
                     relative_url = os.path.join(
                         os.path.relpath(
@@ -343,8 +365,74 @@ def main():
             stages_progress = testplan_obj.update_stages_progress(
                 sim_result, stages_progress
             )
+        if args.testpoint_summary:
+            tests_all.append(testplan_obj.result_data_store)
+
         if output_sim_results and args.testplan_spreadsheet:
             testplan_obj.generate_xls_sim_results(xls)
+
+    summary_all_tests_link_flag = False
+    if len(tests_all) > 0:
+        assert len(set([len(k) for k, _, _ in tests_all])) == 1, (
+            "All testplan columns are not aligned"
+        )
+        unprocessed_tp_data = []
+        for _, data, name in tests_all:
+            unprocessed_tp_data.append((data, name))
+        summary_all_tests_link_flag = True
+
+        def process_cumulative_data(all_the_data: list) -> list:
+            data = deepcopy(all_the_data)
+            dict_data = {}
+            for tp, name in data:
+                state = ""
+                for record in tp:
+                    if not state:
+                        state = record[0]
+                    if record[0]:
+                        # this is here so commented stage columns
+                        # can be handled
+                        if state not in record[0]:
+                            state = record[0]
+                    if state not in dict_data:
+                        dict_data[state] = []
+                    dict_data[state].append(record[:1] + [name] + record[1:])
+            data = []
+            for key in sorted(list(dict_data.keys())):
+                data += dict_data[key]
+            data = list(filter(lambda record: SUMMARY_TOKEN not in record[3], data))
+            return data
+
+        data = {
+            "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "title": args.testpoint_summary_title,
+            "test_results_table": tabulate(
+                process_cumulative_data(unprocessed_tp_data),
+                headers=tests_all[0][0][:1]
+                + ["original_testplan"]
+                + tests_all[0][0][1:],
+                tablefmt="unsafehtml",
+            ),
+            "summary_url": os.path.join(
+                os.path.relpath(
+                    args.output_summary.parent, start=args.testpoint_summary.parent
+                ),
+                args.output_summary.name,
+            ),
+        }
+        if args.project_root:
+            data["git_repo"], data["git_branch"], data["git_sha"] = parse_repo_data(
+                args.repository_name, args.project_root
+            )
+        with ir_path(
+            html_templates, "testplan_simulations.html"
+        ) as resourcetemplatefile:
+            with open(resourcetemplatefile, "r") as f:
+                resourcetemplate = f.read()
+        tm = Template(resourcetemplate)
+        content = tm.render(data)
+        with open(args.testpoint_summary, "w") as f:
+            f.write(content)
 
     if args.output_summary:
         header = [
@@ -363,6 +451,21 @@ def main():
             if comments:
                 summary += comments.comment_summary()
             tablefmt = "unsafehtml"
+            if summary_all_tests_link_flag:
+                summary += f"""
+                    <p class="comment">
+                        <a href="{
+                    os.path.join(
+                        os.path.relpath(
+                            args.testpoint_summary.parent,
+                            start=args.output_summary.parent,
+                        ),
+                        args.testpoint_summary.name,
+                    )
+                }
+                        "> View all testplans </a>
+                    </p>
+                """
         else:
             summary = f"# {args.output_summary_title}\n\n"
             tablefmt = "pipe"

@@ -23,6 +23,8 @@ from tabulate import tabulate
 import testplanner.template as html_templates
 from testplanner.resource_map import ResourceMap
 
+SUMMARY_TOKEN = "TOTAL"
+
 
 def get_percentage(value, total):
     """Returns a string representing percentage up to 1 decimal place."""
@@ -853,9 +855,9 @@ class Testplan:
             if ms != "N.A.":
                 target = f" for {ms}"
             if format == "md":
-                totals[ms].test_results = [Result(f"**TOTAL{target}**")]
+                totals[ms].test_results = [Result(f"**{SUMMARY_TOKEN}{target}**")]
             else:
-                totals[ms].test_results = [Result(f"<b>TOTAL{target}</b>")]
+                totals[ms].test_results = [Result(f"<b>{SUMMARY_TOKEN}{target}</b>")]
 
         # Create unmapped as a testpoint to represent tests from the simulation
         # results that could not be mapped to the testpoints.
@@ -1055,6 +1057,9 @@ class Testplan:
             text = "\n<h3> Test Results\n </h3>"
             if self.comments:
                 text += self.comments.comment_testplan(self.filename)
+            from copy import deepcopy
+
+            self.result_data_store = deepcopy(header), deepcopy(table), self.name
 
         else:
             text = "\n### Test Results\n"
