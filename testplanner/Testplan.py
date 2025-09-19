@@ -1265,16 +1265,29 @@ class Testplan:
         * implementation progress
         * percentage of succeeding tests.
         """
-        sim_results = Testplan._parse_hjson(sim_results_file)
-        test_results_ = sim_results.get("test_results", [])
         total = 0
         passing = 0
+        written = 0
+        tests_seen = set()
+        for tp in self.testpoints:
+            for tr in tp.test_results:
+                if not tr:
+                    continue
+                if tr.name.startswith("<b>TOTAL"):
+                    continue
+                if tr.name.startswith("**TOTAL"):
+                    continue
+                if tr.name in tests_seen:
+                    continue
+                tests_seen.add(tr.name)
+                if tr.total != 0:
+                    if tr.passing == tr.total:
+                        passing += 1
+                    written += 1
+                total += 1
         path_rel = os.path.relpath(
             target_sim_results_path.parent, start=summary_output_path.parent
         )
-        for item in test_results_:
-            total += item.get("total", 0)
-            passing += item.get("passing", 0)
         if html_links:
             link = f"<a href='{os.path.join(path_rel, target_sim_results_path.name)}'>{self.name}</a>"
         else:
@@ -1282,26 +1295,13 @@ class Testplan:
                 f"[{self.name}]({os.path.join(path_rel, target_sim_results_path.name)})"
             )
 
-        values = []
-        for key in self.progress:
-            stat = self.progress[key]
-            values.append(stat)
-        progress = defaultdict(lambda: 0)
-        if len(values):
-            keys = values[0].keys()
-            for value in values:
-                for key in keys:
-                    # Skip pass rate and anomalies like N.A.
-                    if isinstance(value[key], int):
-                        progress[key] += value[key]
-
         return [
             link,
             passing,
+            written,
             total,
-            progress["total"],
-            get_percentage(progress["passing"], progress["total"]),
-            get_percentage(passing, total),
+            get_percentage(written, total),
+            get_percentage(passing, written),
         ]
 
     def update_stages_progress(
