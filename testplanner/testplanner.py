@@ -9,6 +9,7 @@ import argparse
 import logging
 import os
 import sys
+from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime
 from importlib.resources import path as ir_path
@@ -22,6 +23,7 @@ from tabulate import tabulate
 import testplanner.template as html_templates
 from testplanner.Comments import Comments
 from testplanner.Testplan import (
+    COMPLETE_TESTPLAN_HEADER,
     SUMMARY_TOKEN,
     Testplan,
     get_percentage,
@@ -366,51 +368,101 @@ def main():
                 sim_result, stages_progress
             )
         if args.testpoint_summary:
-            tests_all.append(testplan_obj.result_data_store)
+            tests_all.append(
+                (
+                    testplan_obj.result_data_store,
+                    testplan_obj.stage_text_to_stage,
+                    testplan_obj.get_testplan_name_with_url(
+                        args.output_summary,
+                        output_sim_path,
+                        html_links=args.output_summary.suffix == ".html",
+                    ),
+                )
+            )
 
         if output_sim_results and args.testplan_spreadsheet:
             testplan_obj.generate_xls_sim_results(xls)
 
     summary_all_tests_link_flag = False
     if len(tests_all) > 0:
-        assert len(set([len(k) for k, _, _ in tests_all])) == 1, (
-            "All testplan columns are not aligned"
-        )
-        unprocessed_tp_data = []
-        for _, data, name in tests_all:
-            unprocessed_tp_data.append((data, name))
         summary_all_tests_link_flag = True
 
         def process_cumulative_data(all_the_data: list) -> list:
             data = deepcopy(all_the_data)
-            dict_data = {}
-            for tp, name in data:
-                state = ""
+            # stage -> stage+comment -> testpoints/tests
+            dict_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+            name_to_url = {}
+            for (header, tp, name), stage_text_to_stage, link in data:
+                curr_stage = ""
                 for record in tp:
-                    if not state:
-                        state = record[0]
+                    if not curr_stage:
+                        curr_stage = record[0]
                     if record[0]:
-                        # this is here so commented stage columns
-                        # can be handled
-                        if state not in record[0]:
-                            state = record[0]
-                    if state not in dict_data:
-                        dict_data[state] = []
-                    dict_data[state].append(record[:1] + [name] + record[1:])
+                        curr_stage = record[0]
+                    newrecord = []
+                    for hname in COMPLETE_TESTPLAN_HEADER:
+                        if hname not in header:
+                            newrecord.append("")
+                        else:
+                            newrecord.append(record[header.index(hname)])
+                    dict_data[stage_text_to_stage[curr_stage]][curr_stage][name].append(
+                        newrecord
+                    )
+                    name_to_url[name] = link
             data = []
-            for key in sorted(list(dict_data.keys())):
-                data += dict_data[key]
-            data = list(filter(lambda record: SUMMARY_TOKEN not in record[3], data))
+            for stage_name in sorted(list(dict_data.keys())):
+                stage_passing = 0
+                stage_total = 0
+                for stage_comment in sorted(list(dict_data[stage_name].keys())):
+                    stage_first = True
+                    for testplan_name in sorted(
+                        list(dict_data[stage_name][stage_comment].keys())
+                    ):
+                        testplan_first = True
+                        for entry in dict_data[stage_name][stage_comment][
+                            testplan_name
+                        ]:
+                            if SUMMARY_TOKEN in entry[2]:
+                                continue
+                            data.append(
+                                [
+                                    stage_comment if stage_first else "",
+                                    name_to_url[testplan_name]
+                                    if testplan_first
+                                    else "",
+                                ]
+                                + entry[1:]
+                            )
+                            stage_passing += entry[5]
+                            stage_total += entry[6]
+                            stage_first = False
+                            testplan_first = False
+                total_str = f"<b>{SUMMARY_TOKEN} for {stage_name}</b>"
+                if args.output_summary.suffix == ".md":
+                    total_str = f"**{SUMMARY_TOKEN} for {stage_name}**"
+                data.append(
+                    [
+                        "",
+                        "",
+                        "",
+                        total_str,
+                        "",
+                        "",
+                        stage_passing,
+                        stage_total,
+                        get_percentage(stage_passing, stage_total),
+                    ]
+                )
             return data
 
         data = {
             "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M"),
             "title": args.testpoint_summary_title,
             "test_results_table": tabulate(
-                process_cumulative_data(unprocessed_tp_data),
-                headers=tests_all[0][0][:1]
+                process_cumulative_data(tests_all),
+                headers=COMPLETE_TESTPLAN_HEADER[:1]
                 + ["original_testplan"]
-                + tests_all[0][0][1:],
+                + COMPLETE_TESTPLAN_HEADER[1:],
                 tablefmt="unsafehtml",
             ),
             "summary_url": os.path.join(
@@ -422,7 +474,11 @@ def main():
         }
         if args.project_root:
             data["git_repo"], data["git_branch"], data["git_sha"] = parse_repo_data(
-                args.repository_name, args.project_root
+                args.repository_name,
+                args.project_root,
+                source_url_prefix,
+                git_branch_prefix,
+                git_commit_prefix,
             )
         with ir_path(
             html_templates, "testplan_simulations.html"
@@ -463,7 +519,7 @@ def main():
                         args.testpoint_summary.name,
                     )
                 }
-                        "> View all testplans </a>
+                        "> View all tests </a>
                     </p>
                 """
         else:

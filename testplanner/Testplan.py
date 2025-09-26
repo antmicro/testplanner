@@ -26,6 +26,19 @@ from testplanner.resource_map import ResourceMap
 SUMMARY_TOKEN = "TOTAL"
 
 
+COMPLETE_TESTPLAN_HEADER = [
+    "Stage",
+    "Name",
+    "Tests",
+    "Max Job Runtime",
+    "Simulated Time",
+    "Passing",
+    "Total",
+    "Pass Rate",
+    "Logs",
+]
+
+
 def get_percentage(value, total):
     """Returns a string representing percentage up to 1 decimal place."""
     if total == 0:
@@ -933,15 +946,6 @@ class Testplan:
     def get_test_results_table(self, map_full_testplan=True, format="pipe"):
         """Return the mapped test results into a markdown table."""
         assert self.test_results_mapped, "Have you invoked map_test_results()?"
-        header = [
-            "Name",
-            "Tests",
-            "Max Job Runtime",
-            "Simulated Time",
-            "Passing",
-            "Total",
-            "Pass Rate",
-        ]
         stages = set()
         has_logs = False
         for tp in self.testpoints:
@@ -951,18 +955,18 @@ class Testplan:
                 if tr.passing_logs or tr.failing_logs:
                     has_logs = True
         skip_stages = False
-        if len(stages) > 1 or list(stages)[0] != "":
-            header = ["Stage"] + header
-        else:
+        if not (len(stages) > 1 or list(stages)[0] != ""):
             skip_stages = True
-        if has_logs:
-            header.append("Logs")
+        header = COMPLETE_TESTPLAN_HEADER[
+            (1 if skip_stages else 0) : (None if has_logs else -1)
+        ]
         colalign = (
             ("center",) * (1 if skip_stages else 2)
             + ("left",)
             + ("center",) * (5 + has_logs)
         )
         table = []
+        self.stage_text_to_stage = {}
         prev_stage = ""
         for tp in self.testpoints:
             stage = "" if tp.stage == "N.A." else tp.stage
@@ -1035,6 +1039,8 @@ class Testplan:
                     # for now comments will only work in HTML
                     if "html" in format and self.comments:
                         stage_text += self.comments.comment_stage(self.filename, stage)
+
+                    self.stage_text_to_stage[stage_text] = stage
 
                 table.append(
                     ([stage_text] if not skip_stages else [])
@@ -1339,6 +1345,28 @@ class Testplan:
             get_percentage(written, total),
             get_percentage(passing, written),
         ]
+
+    def get_testplan_name_with_url(
+        self,
+        summary_output_path: Optional[Path],
+        target_sim_results_path: Optional[Path],
+        html_links: bool = False,
+    ):
+        """
+        Provides URL to testplan results or testplan name if no paths are
+        provided.
+        """
+        if summary_output_path is None or target_sim_results_path is None:
+            return self.name
+        path_rel = os.path.relpath(
+            target_sim_results_path.parent, start=summary_output_path.parent
+        )
+        link = f"<a href='{os.path.join(path_rel, target_sim_results_path.name)}'>{self.name}</a>"
+        if not html_links:
+            link = (
+                f"[{self.name}]({os.path.join(path_rel, target_sim_results_path.name)})"
+            )
+        return link
 
     def update_stages_progress(
         self,
