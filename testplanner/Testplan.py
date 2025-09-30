@@ -122,7 +122,7 @@ def render_log_entry(number: int, log_url, format: str, passing: bool):
         return f"""
         <a href="{log_url}" class="button tooltip">
             <img src="assets/file.svg" alt="Pass #{number}" class="{"log-passing" if passing else "log-failing"}" style="transform: scale(1.25) translatey(1px);"/>
-            <span class="tooltip-text">Go to {"passing" if passing else "failing"} log #{number}</span>
+            <span class="tooltip-text tooltip-text-left">Go to {"passing" if passing else "failing"} log #{number}</span>
         </a>
         """
     else:

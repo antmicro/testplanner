@@ -149,12 +149,19 @@
     white-space: nowrap;
   }
 
+  .tooltip-text-left {
+    top: 150%;
+    right: 100%;
+  }
+
+  .tooltip-text-right {
+    top: 150%;
+    left: 100%;
+  }
+
   .tooltip:hover .tooltip-text {
     visibility: visible;
     opacity: 1;
-    top: 150%;
-    right: 100%;
-    z-index: 100;
   }
 
   ::-webkit-scrollbar {
