@@ -39,6 +39,7 @@
     top: 0;
     width: 100%;
     z-index: 1000;
+    position: fixed;
   }
 
   .container-title > h3 {
@@ -63,6 +64,7 @@
     align-items: center;
     color: var(--text-primary);
     gap: 0.5rem;
+    flex-wrap: wrap;
   }
 
   body > .container-title {
@@ -83,6 +85,7 @@
     display: flex;
     align-items: center;
     gap: 1rem;
+    flex-wrap: wrap;
   }
 
   .nav-item {
