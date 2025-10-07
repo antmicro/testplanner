@@ -65,7 +65,7 @@ The description can look as follows:
 
 ## Testplan example
 
-The following code represents a testplan named `Example tesplan` with single testpoint:
+The following code represents a testplan named `Example testplan` with single testpoint:
 
 ```
 {
