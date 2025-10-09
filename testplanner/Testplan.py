@@ -978,6 +978,9 @@ class Testplan:
                 # for now comments will only work in HTML
                 if self.comments:
                     tp_text += self.comments.comment_testpoint(self.filename, tp_name)
+                    tp_text += self.comments.get_testpoint_estimation(
+                        self.filename, tp_name
+                    )
                 tp_name = tp_text
 
             for tr in tp.test_results:
@@ -1031,6 +1034,9 @@ class Testplan:
                 # for now comments will only work in HTML
                 if "html" in format and self.comments:
                     test_name += self.comments.comment_test(self.filename, tr.name)
+                    test_name += self.comments.get_test_estimation(
+                        self.filename, tr.name
+                    )
 
                 stage_text = ""
                 if not skip_stages and is_new_stage:
@@ -1063,6 +1069,7 @@ class Testplan:
             text = "\n<h3> Test Results\n </h3>"
             if self.comments:
                 text += self.comments.comment_testplan(self.filename)
+                text += self.comments.get_estimation_totals(self.filename)
             from copy import deepcopy
 
             self.result_data_store = deepcopy(header), deepcopy(table), self.name

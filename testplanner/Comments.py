@@ -5,6 +5,7 @@
 r"""Utility for reading and applying comments from comments.hjson"""
 
 import logging
+import re
 import sys
 from pathlib import PurePath
 
@@ -18,9 +19,8 @@ class Comments:
         self.comments = Testplan._parse_hjson(comments_file)
         self.link_regexes = self.comments.get("link_regexes", [])
         del self.comments["link_regexes"]
-
-        # Compile regexes
-        import re
+        self.estimations = {}
+        self.estimations_regex = re.compile(r"(.*)\[([0-9]+)\]$")
 
         try:
             self.combined_link_regex = "|".join(r["regex"] for r in self.link_regexes)
@@ -62,22 +62,92 @@ class Comments:
         """Returns HTML comment for a testpoint given the testplan filename, testpoint name, and testpoint description."""
         comment = None
         if self.comments:
-            comment = (
+            data = (
                 self.comments.get(PurePath(filename).stem, {})
                 .get("testpoint_comments", {})
-                .get(testpoint, None)
+                .get(testpoint, "")
             )
+            matched = self.estimations_regex.match(data)
+            if matched:
+                comment = matched.group(1)
+                stem = PurePath(filename).stem
+                if stem not in self.estimations:
+                    self.estimations[stem] = {}
+                if "testpoints" not in self.estimations[stem]:
+                    self.estimations[stem]["testpoints"] = {}
+                self.estimations[stem]["testpoints"][testpoint] = int(matched.group(2))
         if comment:
             return f'<br/><span class="comment">{self.htmlify(comment)}</span>'
         return ""
 
+    def _check_dict(self, firstkey, midkey=None, lastkey=None):
+        if firstkey not in self.estimations:
+            return False
+        if midkey and midkey not in self.estimations[firstkey]:
+            return False
+        if lastkey and (
+            not midkey or lastkey not in self.estimations[firstkey][midkey]
+        ):
+            return False
+        return True
+
+    def get_testpoint_estimation(self, filename, testpoint):
+        plan_name = PurePath(filename).stem
+        if self._check_dict(plan_name, "testpoints", testpoint):
+            return f"""<br/><span class="comment">{
+                self.htmlify(
+                    "Estimate: "
+                    + str(self.estimations[plan_name]["testpoints"][testpoint])
+                )
+            }</span>"""
+        return ""
+
+    def get_test_estimation(self, filename, test):
+        plan_name = PurePath(filename).stem
+        if self._check_dict(plan_name, "tests", test):
+            return f"""<br/><span class="comment">{
+                self.htmlify(
+                    "Estimate: " + str(self.estimations[plan_name]["tests"][test])
+                )
+            }</span>"""
+        return ""
+
+    def get_estimation_totals(self, filename):
+        plan_name = PurePath(filename).stem
+        if self._check_dict(plan_name):
+            test_total = 0
+            testpoint_total = 0
+            if self._check_dict(plan_name, "tests"):
+                for value in self.estimations[plan_name]["tests"].values():
+                    test_total += value
+            if self._check_dict(plan_name, "testpoints"):
+                for value in self.estimations[plan_name]["testpoints"].values():
+                    testpoint_total += value
+            total_str = f"Total estimate: {test_total + testpoint_total}"
+            return f'<p class="comment">{self.htmlify(total_str)}</p>'
+        return ""
+
     def comment_test(self, filename, test):
-        """Returns HTML comment for a test given the testplan filename, test name, and initial displayed test text."""
-        comment = (
+        """
+        Returns HTML comment for a test given the testplan filename,
+        test name, and initial displayed test text.
+        """
+        data = (
             self.comments.get(PurePath(filename).stem, {})
             .get("test_comments", {})
-            .get(test, None)
+            .get(test, "")
         )
+        matched = self.estimations_regex.match(data)
+        if matched:
+            comment = matched.group(1)
+            stem = PurePath(filename).stem
+            if stem not in self.estimations:
+                self.estimations[stem] = {}
+            if "tests" not in self.estimations[stem]:
+                self.estimations[stem]["tests"] = {}
+            self.estimations[stem]["tests"][test] = int(matched.group(2))
+        else:
+            comment = data
         if comment:
             return f'<br/><span class="comment">{self.htmlify(comment)}</span>'
         return ""
