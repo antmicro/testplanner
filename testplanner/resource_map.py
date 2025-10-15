@@ -24,6 +24,42 @@ TESTPLAN_LEVELS = [
 TESTPLAN_KEYWORDS = TESTPLAN_LEVELS + ["name", "filename"]
 
 
+def glob_resources(
+    base_dir: Path, pattern: str, engine: Optional[str] = None
+) -> list[Path]:
+    """
+    Searches files in base_dir based on given pattern.
+
+    Parameters
+    ----------
+    base_dir: Path
+        Path to the base directory to search for resources
+    pattern: str
+        String with pattern specifying files to look for
+    engine: Optional[str]
+        Engine to use for the search. Can be "glob", "regex"
+        or None to use the default approach for Testplan
+        (stored in self.resource_search_engine).
+
+    Returns
+    -------
+    list[Path]:
+        List of files matching the pattern
+    """
+    glob_pattern = pattern
+    if engine == "regex":
+        glob_pattern = "*"
+    results = sorted(base_dir.rglob(glob_pattern))
+    if engine == "glob":
+        return results
+
+    def regex_filter(entry):
+        return re.fullmatch(pattern, str(entry))
+
+    result = sorted(filter(regex_filter, results))
+    return result
+
+
 class ResourceMap:
     """
     Class processing the resource mappings.

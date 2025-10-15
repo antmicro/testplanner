@@ -21,7 +21,7 @@ from jinja2 import Template
 from tabulate import tabulate
 
 import testplanner.template as html_templates
-from testplanner.resource_map import ResourceMap
+from testplanner.resource_map import ResourceMap, glob_resources
 
 SUMMARY_TOKEN = "TOTAL"
 
@@ -370,6 +370,34 @@ class Testplan:
     rsvd_keywords = ["import_testplans", "testpoints", "covergroups"]
     element_cls = {"testpoint": Testpoint, "covergroup": Covergroup}
 
+    def glob_resources(
+        self, base_dir: Path, pattern: str, engine: Optional[str] = None
+    ) -> list[Path]:
+        """
+        Searches files in base_dir based on given pattern.
+
+        Parameters
+        ----------
+        base_dir: Path
+            Path to the base directory to search for resources
+        pattern: str
+            String with pattern specifying files to look for
+        engine: Optional[str]
+            Engine to use for the search. Can be "glob", "regex"
+            or None to use the default approach for Testplan
+            (stored in self.resource_search_engine).
+
+        Returns
+        -------
+        list[Path]:
+            List of files matching the pattern
+        """
+        assert engine in [None, "glob", "regex"]
+        if engine is None:
+            engine = self.resource_search_engine
+
+        return glob_resources(base_dir, pattern, engine)
+
     @staticmethod
     def _parse_hjson(filename: Path):
         """Parses an input file with HJson and returns a dict."""
@@ -439,6 +467,7 @@ class Testplan:
         git_commit_prefix="",
         docs_url_prefix="",
         comments=None,
+        resource_search_engine="",
     ):
         """Initialize the testplan.
 
@@ -462,6 +491,7 @@ class Testplan:
         self.git_commit_prefix = git_commit_prefix
         self.docs_url_prefix = docs_url_prefix.rstrip("/")
         self.comments = comments
+        self.resource_search_engine = resource_search_engine
 
         # Split the filename into filename and tags, if provided.
         split = str(filename).split(":")
@@ -731,7 +761,7 @@ class Testplan:
         if self.resource_map:
             source = self.resource_map.get("source", self.filename, self.name)
             if source is not None:
-                candidatepaths = sorted(self.repo_top.resolve().glob(source))
+                candidatepaths = self.glob_resources(self.repo_top.resolve(), source)
                 assert len(candidatepaths) <= 1, (
                     f"Multiple source files assigned to testplan {self.name}:  {source} {candidatepaths}"
                 )
@@ -807,7 +837,7 @@ class Testplan:
         )
         if test_source is None:
             return test_name
-        candidatepaths = sorted(self.repo_top.resolve().glob(test_source))
+        candidatepaths = self.glob_resources(self.repo_top.resolve(), test_source)
         assert len(candidatepaths) <= 1, (
             f"Multiple files assigned to test {self.name}/{testpoint_name}/{test_name}:  {test_source} {candidatepaths}"
         )

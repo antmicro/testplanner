@@ -142,6 +142,12 @@ def main():
         type=Path,
     )
     parser.add_argument(
+        "--testplan-file-map-search-engine",
+        help="Type of engine to use for searching files. Can be glob or regex",
+        choices=["glob", "regex"],
+        default="glob",
+    )
+    parser.add_argument(
         "--comments-file",
         help="Path to the file with external comments to be added to testplans",
         type=Path,
@@ -301,6 +307,7 @@ def main():
             git_commit_prefix=git_commit_prefix,
             docs_url_prefix=docs_url_prefix,
             comments=comments,
+            resource_search_engine=args.testplan_file_map_search_engine,
         )
 
         sim_result = None
