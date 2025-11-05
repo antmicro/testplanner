@@ -134,6 +134,68 @@ Additionally you can choose output directory explicitly by providing `-o` flag:
 testplanner verification_plan.hjson -o generated
 ```
 
+## Adding comments to testplan
+
+Testplanner supports adding comments to summary, stages, testpoints and tests.
+You can do so by passing `comments.hjson` file using `--comments-file` option.
+The comments file consists of:
+
+* `summary_comment` - comment for the summary,
+* `link_regexes` - list of regexes that for creating links in comments,
+* `<testplan>` - entry for each testplan, it should be a name of testplan file without extension. 
+
+### Link regexes
+
+Each entry in `link_regexes` consist of:
+
+* `regex` - an actual regex for finding substring from which link can be created,
+* `text` - text that will be visible in the comment,
+* `link` - URL to which link will navigate.
+
+You can use capture groups from `regex` in `text` and `link` properties.
+To do so add `\\x` where `x` should be the index of the capture group that you want to insert.
+
+### Testplan comments
+
+Each testplan entry can consist of:
+* `general_comment` - comment for the whole testplan,
+* `stage_comments` - comments for stages,
+* `testpoint_comments` - comments for testpoints,
+* `test_comments` - comments for tests.
+
+Withing each of these entries (except `general_comment`) the structure is the same:
+```yaml
+name: comment
+```
+where name is the name of the entity (stage, testpoint, test).
+
+### Example
+```yaml
+{
+    summary_comment:
+    '''
+    [My project](https://link-to-my-project.com)
+    '''
+
+    link_regexes:
+    [
+       {
+         regex: "!([0-9]+)"
+         text: '!\\1'
+         link: 'https://github.com/my-org/my-project/pulls/\\1'
+       }
+    ]
+
+    testplan:
+    {
+        test_comments:
+        {
+            example_test: "Currently fails. Will be fixed in !123."
+        }
+    }
+}
+```
+
 ## Using cocotb tests' results in testplanner
 
 [cocotb](https://www.cocotb.org/) provides results in XML format conforming to xUnit definition of tests' results.
