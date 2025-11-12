@@ -463,6 +463,7 @@ class Testplan:
         diagram_path=None,
         resource_map_data=None,
         source_url_prefix="",
+        git_file_prefix="",
         git_branch_prefix="",
         git_commit_prefix="",
         docs_url_prefix="",
@@ -487,6 +488,7 @@ class Testplan:
         self.resource_map = ResourceMap(resource_map_data)
         self.repo_top = repo_top
         self.source_url_prefix = source_url_prefix
+        self.git_file_prefix = git_file_prefix
         self.git_branch_prefix = git_branch_prefix
         self.git_commit_prefix = git_commit_prefix
         self.docs_url_prefix = docs_url_prefix.rstrip("/")
@@ -767,7 +769,9 @@ class Testplan:
                 )
                 if len(candidatepaths) == 1:
                     path = candidatepaths[0].relative_to(self.repo_top.resolve())
-                    output.write(f"[Source file]({self.source_url_prefix}/{path})\n\n")
+                    output.write(
+                        f"[Source file]({self.source_url_prefix}{self.git_file_prefix}/{path})\n\n"
+                    )
                 else:
                     print(
                         f'Source file for testplan "{self.name}" not found ({self.filename}) (regex: {source})!'
@@ -784,7 +788,7 @@ class Testplan:
                             Path(item["file"]).resolve().relative_to(self.repo_top)
                         )
                     tests_to_urls[item["name"]] = (
-                        f"{self.source_url_prefix}/{item['file']}"
+                        f"{self.source_url_prefix}{self.git_file_prefix}/{item['file']}"
                     )
                     if "lineno" in item:
                         tests_to_urls[item["name"]] += f"#L{item['lineno']}"
@@ -844,7 +848,7 @@ class Testplan:
         if len(candidatepaths) == 0:
             return test_name
         relative_path = candidatepaths[0].relative_to(self.repo_top.resolve())
-        return f"[{test_name}]({self.source_url_prefix}/{relative_path})"
+        return f"[{test_name}]({self.source_url_prefix}{self.git_file_prefix}/{relative_path})"
 
     def map_test_results(self, test_results, format="md"):
         """Map test results to testpoints."""
@@ -1032,11 +1036,9 @@ class Testplan:
                         file_fmt = tr.file
                         if tr.lineno is not None:
                             file_fmt += f"#L{tr.lineno}"
-                        test_name = (
-                            f"<a href={self.source_url_prefix}/{file_fmt}>{tr.name}</a>"
-                        )
+                        test_name = f"<a href={self.source_url_prefix}{self.git_file_prefix}/{file_fmt}>{tr.name}</a>"
                     else:
-                        test_name = f"[{tr.name}]({self.source_url_prefix}/{tr.file}"
+                        test_name = f"[{tr.name}]({self.source_url_prefix}{self.git_file_prefix}/{tr.file}"
                         if tr.lineno is not None:
                             test_name += f"#L{tr.lineno})"
                         else:
@@ -1055,7 +1057,7 @@ class Testplan:
                         test_name += '<br/><div class="additional-sources">'
                         test_name += " | ".join(
                             [
-                                f"<a href={self.source_url_prefix}/{v}>{k}</a>"
+                                f"<a href={self.source_url_prefix}{self.git_file_prefix}/{v}>{k}</a>"
                                 for k, v in tr.additional_sources.items()
                             ]
                         )
@@ -1275,7 +1277,9 @@ class Testplan:
         root = Path(self.repo_top).resolve()
         testplan_repo_path = Path(self.filename).resolve().relative_to(root)
         if self.source_url_prefix:
-            return f"{self.source_url_prefix}/{testplan_repo_path}"
+            return (
+                f"{self.source_url_prefix}{self.git_file_prefix}/{testplan_repo_path}"
+            )
         return ""
 
     def sim_results_html(

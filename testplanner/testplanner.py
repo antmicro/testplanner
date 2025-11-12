@@ -157,6 +157,12 @@ def main():
         help="Prefix for URLs to sources in generated files",
     )
     parser.add_argument(
+        "--git-url-file-prefix",
+        help="Prefix for source URLs to file URLs in the git host",
+        type=none_or_str,
+        default="",
+    )
+    parser.add_argument(
         "--git-url-branch-prefix",
         help="Prefix for source URLs to branch URLs in the git host",
         type=none_or_str,
@@ -220,6 +226,7 @@ def main():
     level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(level=level)
 
+    git_file_prefix = args.git_url_file_prefix
     git_branch_prefix = args.git_url_branch_prefix
     git_commit_prefix = args.git_url_commit_prefix
 
@@ -303,6 +310,7 @@ def main():
             repo_top=repo_root,
             resource_map_data=resource_map_data,
             source_url_prefix=source_url_prefix,
+            git_file_prefix=git_file_prefix,
             git_branch_prefix=git_branch_prefix,
             git_commit_prefix=git_commit_prefix,
             docs_url_prefix=docs_url_prefix,
