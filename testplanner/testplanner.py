@@ -508,13 +508,14 @@ def main():
     if args.output_summary:
         header = [
             "Name",
-            "Passing tests",
             "Implemented tests",
             "Planned tests",
             "Implementation progress",
+            "Passing runs",
+            "Total runs",
             "Pass Rate",
         ]
-        colalign = ["center", "right", "right", "right", "right", "right"]
+        colalign = ["center"] + ["right"] * (len(header) - 1)
         if args.output_summary.suffix == ".html":
             sum_title = f"<h3> {args.output_summary_title}\n </h3>\n"
             summary = ""
@@ -554,7 +555,7 @@ def main():
             "Pass Rate",
         ]
 
-        colalign = ["center"] + 5 * ["right"]
+        colalign = ["center"] + (len(header_stages) - 1) * ["right"]
 
         stages_summary = ""
         if args.output_summary.suffix == ".html":

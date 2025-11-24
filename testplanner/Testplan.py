@@ -1348,9 +1348,12 @@ class Testplan:
         * implementation progress
         * percentage of succeeding tests.
         """
-        total = 0
-        passing = 0
-        written = 0
+        total = 0  # aka planned
+        written = 0  # aka implemented
+
+        passing_runs = 0
+        total_runs = 0
+
         tests_seen = set()
         for tp in self.testpoints:
             for tr in tp.test_results:
@@ -1364,8 +1367,8 @@ class Testplan:
                     continue
                 tests_seen.add(tr.name)
                 if tr.total != 0:
-                    if tr.passing == tr.total:
-                        passing += 1
+                    passing_runs += tr.passing
+                    total_runs += tr.total
                     written += 1
                 total += 1
         path_rel = os.path.relpath(
@@ -1380,11 +1383,12 @@ class Testplan:
 
         return [
             link,
-            passing,
             written,
             total,
-            get_percentage(written, total),
-            get_percentage(passing, written),
+            get_percentage(written, total),  # Implementation progress
+            passing_runs,
+            total_runs,
+            get_percentage(passing_runs, total_runs),  # Pass Rate
         ]
 
     def get_testplan_name_with_url(
