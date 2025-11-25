@@ -866,14 +866,17 @@ class Testplan:
             stage and also the grand total.
             """
             ms = testpoint.stage
+
+            tp_name = testpoint.name
+
             for tr in testpoint.test_results:
                 if not tr:
                     continue
 
-                if tr.name in tests_seen:
+                if (ms, tp_name, tr.name) in tests_seen:
                     continue
 
-                tests_seen.add(tr.name)
+                tests_seen.add((ms, tp_name, tr.name))
                 # Compute the testplan progress.
                 self.progress[ms]["total"] += 1
                 if tr.total != 0:
@@ -1376,9 +1379,9 @@ class Testplan:
                     continue
                 if tr.name.startswith("**TOTAL"):
                     continue
-                if tr.name in tests_seen:
+                if (tp.name, tr.name) in tests_seen:
                     continue
-                tests_seen.add(tr.name)
+                tests_seen.add((tp.name, tr.name))
                 if tr.total != 0:
                     passing_runs += tr.passing
                     total_runs += tr.total
@@ -1449,10 +1452,10 @@ class Testplan:
                 if tr.name.startswith("<b>TOTAL") or tr.name.startswith("**TOTAL"):
                     continue
 
-                if tr.name in tests_seen:
+                if (stage, tp.name, tr.name) in tests_seen:
                     continue
 
-                tests_seen.add(tr.name)
+                tests_seen.add((stage, tp.name, tr.name))
 
                 stages_progress[stage]["total"] += 1
                 if tr.total != 0:
