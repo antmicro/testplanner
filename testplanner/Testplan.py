@@ -518,10 +518,12 @@ class Testplan:
         self.progress = {}
         for key in set([i.stage for i in self.testpoints] + ["N.A."]):
             self.progress[key] = {
-                "passing": 0,
                 "written": 0,
                 "total": 0,
-                "progress": 0.0,
+                "implementation_progress": 0.0,
+                "passing_runs": 0,
+                "total_runs": 0,
+                "pass_rate": 0.0,
             }
 
     @staticmethod
@@ -875,8 +877,8 @@ class Testplan:
                 # Compute the testplan progress.
                 self.progress[ms]["total"] += 1
                 if tr.total != 0:
-                    if tr.passing == tr.total:
-                        self.progress[ms]["passing"] += 1
+                    self.progress[ms]["passing_runs"] += tr.passing
+                    self.progress[ms]["total_runs"] += tr.total
                     self.progress[ms]["written"] += 1
 
                 # Compute the stage total & the grand total.
@@ -946,7 +948,10 @@ class Testplan:
                 self.progress.pop(ms)
                 continue
 
-            stat["progress"] = get_percentage(stat["passing"], stat["total"])
+            stat["pass_rate"] = get_percentage(stat["passing_runs"], stat["total_runs"])
+            stat["implementation_progress"] = get_percentage(
+                stat["written"], stat["total"]
+            )
 
         self.test_results_mapped = True
 
@@ -1119,6 +1124,14 @@ class Testplan:
         table = []
         skip_stage = False
         stages = list(set([key for key in self.progress.keys()]))
+        key2header_mapping = {
+            "written": "Implemented tests",
+            "total": "Planned tests",
+            "implementation_progress": "Implementation progress",
+            "passing_runs": "Passing runs",
+            "total_runs": "Total runs",
+            "pass_rate": "Pass Rate",
+        }
         if len(stages) == 1 and stages[0] == "N.A.":
             skip_stage = True
         for key in sorted(self.progress.keys()):
@@ -1128,7 +1141,7 @@ class Testplan:
                 continue
             if not header:
                 header = ([] if skip_stage else ["Stage"]) + [
-                    k.capitalize() for k in stat
+                    key2header_mapping.get(k, k).capitalize() for k in stat
                 ]
             table.append(
                 ([] if skip_stage else [key if key != "N.A." else ""]) + values
