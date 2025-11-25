@@ -76,6 +76,8 @@ class Comments:
                 if "testpoints" not in self.estimations[stem]:
                     self.estimations[stem]["testpoints"] = {}
                 self.estimations[stem]["testpoints"][testpoint] = int(matched.group(2))
+            else:
+                comment = data
         if comment:
             return f'<br/><span class="comment">{self.htmlify(comment)}</span>'
         return ""
