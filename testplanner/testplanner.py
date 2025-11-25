@@ -548,10 +548,11 @@ def main():
 
         header_stages = [
             "Stage",
-            "Passing tests",
             "Implemented tests",
             "Planned tests",
             "Implementation progress",
+            "Passing runs",
+            "Total runs",
             "Pass Rate",
         ]
 
@@ -569,14 +570,15 @@ def main():
         for stage in sorted(stages_progress.keys()):
             results = stages_progress[stage]
             impl_progress = get_percentage(results["written"], results["total"])
-            pass_rate = get_percentage(results["passing"], results["written"])
+            pass_rate = get_percentage(results["passing_runs"], results["total_runs"])
             stages_table.append(
                 [
                     stage,
-                    results["passing"],
                     results["written"],
                     results["total"],
                     impl_progress,
+                    results["passing_runs"],
+                    results["total_runs"],
                     pass_rate,
                 ]
             )

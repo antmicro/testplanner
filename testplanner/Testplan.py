@@ -1424,7 +1424,7 @@ class Testplan:
         tests_seen = set()
         if stages_progress is None:
             stages_progress = defaultdict(
-                lambda: {"passing": 0, "written": 0, "total": 0}
+                lambda: {"passing_runs": 0, "total_runs": 0, "written": 0, "total": 0}
             )
         for tp in self.testpoints:
             stage = tp.stage
@@ -1443,8 +1443,8 @@ class Testplan:
 
                 stages_progress[stage]["total"] += 1
                 if tr.total != 0:
-                    if tr.passing == tr.total:
-                        stages_progress[stage]["passing"] += 1
+                    stages_progress[stage]["passing_runs"] += tr.passing
+                    stages_progress[stage]["total_runs"] += tr.total
                     stages_progress[stage]["written"] += 1
 
         return stages_progress
