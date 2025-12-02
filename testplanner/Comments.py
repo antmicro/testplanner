@@ -20,6 +20,7 @@ class Comments:
         self.link_regexes = self.comments.get("link_regexes", [])
         del self.comments["link_regexes"]
         self.estimations = {}
+        self.estimations_unit = self.comments.get("estimations_unit", "")
         self.estimations_regex = re.compile(r"(.*)\[([0-9]+)\]$")
 
         try:
@@ -98,8 +99,12 @@ class Comments:
         if self._check_dict(plan_name, "testpoints", testpoint):
             return f"""<br/><span class="comment">{
                 self.htmlify(
-                    "Estimate: "
-                    + str(self.estimations[plan_name]["testpoints"][testpoint])
+                    (
+                        "Estimate: "
+                        + str(self.estimations[plan_name]["testpoints"][testpoint])
+                        + " "
+                        + self.estimations_unit
+                    ).rstrip()
                 )
             }</span>"""
         return ""
@@ -109,7 +114,12 @@ class Comments:
         if self._check_dict(plan_name, "tests", test):
             return f"""<br/><span class="comment">{
                 self.htmlify(
-                    "Estimate: " + str(self.estimations[plan_name]["tests"][test])
+                    (
+                        "Estimate: "
+                        + str(self.estimations[plan_name]["tests"][test])
+                        + " "
+                        + self.estimations_unit
+                    ).rstrip()
                 )
             }</span>"""
         return ""
@@ -125,7 +135,7 @@ class Comments:
             if self._check_dict(plan_name, "testpoints"):
                 for value in self.estimations[plan_name]["testpoints"].values():
                     testpoint_total += value
-            total_str = f"Total estimate: {test_total + testpoint_total}"
+            total_str = f"Total estimate: {test_total + testpoint_total} {self.estimations_unit}".rstrip()
             return f'<p class="comment">{self.htmlify(total_str)}</p>'
         return ""
 
