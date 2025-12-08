@@ -47,6 +47,11 @@
     font-weight: 400;
     color: var(--text-primary);
     padding: 0;
+    display: inline-block;
+  }
+
+  .container-title > a {
+    margin-left: 2em;
   }
 
   .navbar {

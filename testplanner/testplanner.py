@@ -240,6 +240,12 @@ def main():
         nargs="+",
     )
     parser.add_argument(
+        "--coverage-report-url",
+        help="URL to coverage report to be included in testplanner's results",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable debug prints."
     )
     parser.add_argument(
@@ -421,6 +427,7 @@ def main():
             comments=comments,
             resource_search_engine=args.testplan_file_map_search_engine,
             testtags=testtags,
+            coverage_report_url=args.coverage_report_url,
         )
 
         sim_result = None
@@ -656,7 +663,7 @@ def main():
         ]
         colalign = ["center"] + ["right"] * (len(header) - 1)
         if args.output_summary.suffix == ".html":
-            sum_title = f"<h3> {args.output_summary_title}\n </h3>\n"
+            sum_title = f"<h3>{args.output_summary_title}</h3>"
             summary = ""
             # for now comments will only work in HTML
             if comments:
@@ -733,6 +740,7 @@ def main():
             if args.output_summary.suffix == ".html":
                 data = {
                     "title": sum_title,
+                    "coverage_report_url": args.coverage_report_url,
                     "test_results_table": summary,
                     "progress_table": stages_summary,
                     "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M"),

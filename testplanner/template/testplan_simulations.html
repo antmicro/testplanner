@@ -43,6 +43,15 @@
                     </div>
                     {% endif %}
 
+                    {% if(coverage_report_url) %}
+                    <div class="nav-urls">
+                        <a href="{{ coverage_report_url }}" class="button tooltip">
+                            <img src="assets/coverage.svg" alt="Source" style="transform: scale(1.25) translatey(1px);"/>
+                            <span class="tooltip-text tooltip-text-right">Go to coverage</span>
+                        </a>
+                    </div>
+                    {% endif %}
+
                 </div>
                 {% if(git_repo or git_branch or git_sha or timestamp or test_tags) %}
                 <div class="nav-right">

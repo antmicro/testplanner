@@ -639,6 +639,7 @@ class Testplan:
         comments=None,
         resource_search_engine="",
         testtags=None,
+        coverage_report_url=None,
     ):
         """Initialize the testplan.
 
@@ -665,6 +666,7 @@ class Testplan:
         self.comments = comments
         self.resource_search_engine = resource_search_engine
         self.testtags = testtags
+        self.coverage_report_url = coverage_report_url
 
         # Split the filename into filename and tags, if provided.
         split = str(filename).split(":")
@@ -1618,7 +1620,9 @@ class Testplan:
                 self.git_commit_prefix,
             )
         if self.testtags is not None:
-            data["test_tags"] = f'<a href="testtags.html">Test tags</a>'
+            data["test_tags"] = '<a href="testtags.html">Test tags</a>'
+        if self.coverage_report_url is not None:
+            data["coverage_report_url"] = self.coverage_report_url
 
         return Testplan.render_template(data)
 
