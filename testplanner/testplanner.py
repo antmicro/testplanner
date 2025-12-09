@@ -27,6 +27,7 @@ from testplanner.Testplan import (
     SUMMARY_TOKEN,
     Testplan,
     get_percentage,
+    get_percentage_color,
     parse_repo_data,
 )
 
@@ -571,15 +572,19 @@ def main():
             results = stages_progress[stage]
             impl_progress = get_percentage(results["written"], results["total"])
             pass_rate = get_percentage(results["passing_runs"], results["total_runs"])
+            imp_prog_color = get_percentage_color(results["written"], results["total"])
+            pass_rate_color = get_percentage_color(
+                results["passing_runs"], results["total_runs"]
+            )
             stages_table.append(
                 [
                     stage,
                     results["written"],
                     results["total"],
-                    impl_progress,
+                    f'<span style="color: {imp_prog_color}">{impl_progress}</span>',
                     results["passing_runs"],
                     results["total_runs"],
-                    pass_rate,
+                    f'<span style="color: {pass_rate_color}">{pass_rate}</span>',
                 ]
             )
         stages_summary += tabulate(

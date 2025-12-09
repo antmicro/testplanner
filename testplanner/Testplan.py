@@ -49,6 +49,19 @@ def get_percentage(value, total):
     return f"{perc}%" if perc.is_integer() else "{0:.1f}%".format(round(perc, 1))
 
 
+def get_percentage_color(value: int, total: int):
+    if total == 0:
+        return "#737373"  # neutral
+    rate = value / total * 100.0
+    if rate >= 80.0:
+        return "#22c55e"  # green
+    elif rate >= 60.0:
+        return "#eab308"  # yellow
+    elif rate >= 1.0:
+        return "#f97316"  # orange
+    return "#ef4444"  # red
+
+
 def format_time(time: Optional[Union[int, float, str]]) -> str:
     """Formats time provided in simulation results."""
     if time is None:
@@ -951,10 +964,23 @@ class Testplan:
                 self.progress.pop(ms)
                 continue
 
-            stat["pass_rate"] = get_percentage(stat["passing_runs"], stat["total_runs"])
-            stat["implementation_progress"] = get_percentage(
-                stat["written"], stat["total"]
+            pass_rate_color = get_percentage_color(
+                stat["passing_runs"], stat["total_runs"]
             )
+            imp_prog_color = get_percentage_color(stat["written"], stat["total"])
+
+            pass_rate = get_percentage(stat["passing_runs"], stat["total_runs"])
+            impl_progress = get_percentage(stat["written"], stat["total"])
+
+            stat["pass_rate"] = {
+                "color": pass_rate_color,
+                "percentage": pass_rate,
+            }
+
+            stat["implementation_progress"] = {
+                "color": imp_prog_color,
+                "percentage": impl_progress,
+            }
 
         self.test_results_mapped = True
 
@@ -1029,6 +1055,7 @@ class Testplan:
                 if tr.total == 0 and not map_full_testplan:
                     continue
                 pass_rate = get_percentage(tr.passing, tr.total)
+                pass_rate_color = get_percentage_color(tr.passing, tr.total)
 
                 job_runtime = format_time(tr.job_runtime)
                 simulated_time = format_time(tr.simulated_time)
@@ -1095,7 +1122,7 @@ class Testplan:
                         simulated_time,
                         tr.passing,
                         tr.total,
-                        pass_rate,
+                        f'<span style="color: {pass_rate_color}">{pass_rate}</span>',
                     ]
                     + ([logs] if has_logs else [])
                 )
@@ -1144,8 +1171,16 @@ class Testplan:
                 header = ([] if skip_stage else ["Stage"]) + [
                     key2header_mapping.get(k, k).capitalize() for k in stat
                 ]
+
             table.append(
-                ([] if skip_stage else [key if key != "N.A." else ""]) + values
+                ([] if skip_stage else [key if key != "N.A." else ""])
+                + [
+                    f'<span style="color: {value["color"]}">{value["percentage"]}</span>'
+                    if isinstance(value, dict)
+                    and all(k in value for k in ["color", "percentage"])
+                    else value
+                    for value in values
+                ]
             )
 
         if "html" in format:
@@ -1395,14 +1430,18 @@ class Testplan:
                 f"[{self.name}]({os.path.join(path_rel, target_sim_results_path.name)})"
             )
 
+        imp_prog_color = get_percentage_color(written, total)
+
+        pass_rate_color = get_percentage_color(passing_runs, total_runs)
+
         return [
             link,
             written,
             total,
-            get_percentage(written, total),  # Implementation progress
+            f'<span style="color: {imp_prog_color}">{get_percentage(written, total)}</span>',
             passing_runs,
             total_runs,
-            get_percentage(passing_runs, total_runs),  # Pass Rate
+            f'<span style="color: {pass_rate_color}">{get_percentage(passing_runs, total_runs)}</span>',
         ]
 
     def get_testplan_name_with_url(
