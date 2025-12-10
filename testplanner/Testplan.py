@@ -753,6 +753,7 @@ class Testplan:
         sim_results_path: Path = None,
         target_sim_results_path: Optional[Path] = None,
         target_sim_results_url_prefix: Optional[str] = None,
+        show_status_in_docs: bool = False,
     ) -> None:
         """Write testplan documentation in markdown from the hjson testplan."""
         stages = {}
@@ -793,6 +794,7 @@ class Testplan:
                     )
 
         tests_to_urls = {}
+        sim_results = []
         if sim_results_path:
             sim_results = Testplan._parse_hjson(sim_results_path)
             sim_results = sim_results.get("test_results", [])
@@ -829,12 +831,22 @@ class Testplan:
                     output.write("No Tests Implemented")
                 elif len(tp.tests) == 1:
                     test_name = self.find_test_file(tp.tests[0], tp.name, tests_to_urls)
-                    output.write(f"Test: {test_name}")
+                    status_text = f"Test: {test_name}"
+                    if show_status_in_docs:
+                        test_status = self.get_test_status(tp.tests[0], sim_results)
+                        if test_status:
+                            status_text += f" {test_status}"
+                    output.write(status_text)
                 else:
                     output.write("Tests:\n")
                     for test in tp.tests:
                         test_name = self.find_test_file(test, tp.name, tests_to_urls)
-                        output.write(f"- {test_name}\n")
+                        status_text = f"- {test_name}"
+                        if show_status_in_docs:
+                            test_status = self.get_test_status(test, sim_results)
+                            if test_status:
+                                status_text += f" {test_status}\n"
+                        output.write(status_text)
 
                 output.write("\n\n" + tp.desc.strip() + "\n\n")
 
@@ -842,6 +854,37 @@ class Testplan:
             output.write("## Covergroups\n\n")
             for covergroup in self.covergroups:
                 output.write(f"### {covergroup.name}\n\n{covergroup.desc.strip()}\n\n")
+
+    def get_test_status(self, test_name, sim_results):
+        if not sim_results:
+            return "NOT IMPLEMENTED"
+
+        filtered_results = [
+            result
+            for result in sim_results
+            if "name" in result and result["name"] == test_name
+        ]
+        assert len(filtered_results) <= 1, (
+            "ERROR: There should be at most one test with a given name"
+        )
+        if not filtered_results:
+            return "NOT IMPLEMENTED"
+
+        sim_result = filtered_results[0]
+        passing = sim_result.get("passing", None)
+        total = sim_result.get("total", None)
+
+        assert passing is not None and total is not None, (
+            "ERROR: 'passing' or 'total' attributes missing in simulation results"
+        )
+
+        if total == 0:
+            return '<span style="color: rgba(255, 255, 255, 1.0); border: 1px solid white; background-color: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 3px;">NOT IMPLEMENTED</span>'
+        if passing == 0:
+            return '<span style="color: rgba(255, 0, 0, 1.0); border: 1px solid red; background-color: rgba(255, 0, 0, 0.2); border-radius: 8px; padding: 3px;">FAILING</span>'
+        if passing == total:
+            return '<span style="color: rgba(0, 255, 0, 1.0); border: 1px solid green; background-color: rgba(0, 255, 0, 0.2); border-radius: 8px; padding: 3px;">PASSING</span>'
+        return f'<span style="color: rgba(255, 128, 0, 1.0); border: 1px solid yellow; background-color: rgba(255, 255, 0, 0.2); border-radius: 8px; padding: 3px;">PARTLY PASSING ({passing}/{total} seeds)</span>'
 
     def find_test_file(self, test_name, testpoint_name, tests_to_urls):
         if test_name in tests_to_urls:

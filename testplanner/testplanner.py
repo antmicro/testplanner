@@ -155,6 +155,12 @@ def main():
         type=Path,
     )
     parser.add_argument(
+        "--show-status-in-docs",
+        help="",
+        type=bool,
+        default=False,
+    )
+    parser.add_argument(
         "--source-url-prefix",
         help="Prefix for URLs to sources in generated files",
     )
@@ -419,6 +425,7 @@ def main():
                     sim_result,
                     output_sim_path,
                     args.output_sim_results_prefix,
+                    args.show_status_in_docs,
                 )
                 f.write("\n")
 
