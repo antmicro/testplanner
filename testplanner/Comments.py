@@ -153,13 +153,14 @@ class Comments:
                 )
             }</span>"""
         if self._check_dict(self.issues, testplan, entity_type, entity_name):
-            result += f"""<br/><span class="comment">{
-                self.htmlify(
-                    (
-                        "Issues: " + self.issues[testplan][entity_type][entity_name]
-                    ).rstrip()
-                )
-            }</span>"""
+            if self.issues[testplan][entity_type][entity_name].strip():
+                result += f"""<br/><span class="comment">{
+                    self.htmlify(
+                        (
+                            "Issues: " + self.issues[testplan][entity_type][entity_name]
+                        ).rstrip()
+                    )
+                }</span>"""
         return result
 
     def get_testpoint_metadata(self, filename, testpoint):
