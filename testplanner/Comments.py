@@ -20,8 +20,13 @@ class Comments:
         self.link_regexes = self.comments.get("link_regexes", [])
         del self.comments["link_regexes"]
         self.estimations = {}
+        self.owners = {}
+        self.status = {}
+        self.issues = {}
         self.estimations_unit = self.comments.get("estimations_unit", "")
-        self.estimations_regex = re.compile(r"(.*)\[([0-9]+)\]$")
+        self.metadata_regex = re.compile(
+            r"(?P<content>.*?)(\[(?P<estimate>[0-9]+(\.[0-9]+)?)\])?(\s*\{((?P<status>[a-zA-Z]+))?(\s*(?P<owner>\@[^\s]+))?(?P<issues>(\s*#[0-9]+)*)\})?$"
+        )
 
         try:
             self.combined_link_regex = "|".join(r["regex"] for r in self.link_regexes)
@@ -31,6 +36,41 @@ class Comments:
         except re.error:
             print(f"Error: regex '{r['regex']}' in comment file is invalid.")
             sys.exit(1)
+
+    def parse_comment(self, testplan, entity_type, entity_name, data):
+        matched = self.metadata_regex.match(data)
+        if not matched:
+            return data
+
+        comment = matched.group("content") if matched.group("content") else ""
+
+        self._update_metadata(
+            self.estimations,
+            testplan,
+            entity_type,
+            entity_name,
+            int(matched.group("estimate")) if matched.group("estimate") else None,
+        )
+        self._update_metadata(
+            self.status, testplan, entity_type, entity_name, matched.group("status")
+        )
+        self._update_metadata(
+            self.owners, testplan, entity_type, entity_name, matched.group("owner")
+        )
+        self._update_metadata(
+            self.issues, testplan, entity_type, entity_name, matched.group("issues")
+        )
+
+        return comment
+
+    def _update_metadata(self, entry, testplan, entity_type, entity_name, value):
+        if value is None:
+            return None
+        if testplan not in entry:
+            entry[testplan] = {}
+        if entity_type not in entry[testplan]:
+            entry[testplan][entity_type] = {}
+        entry[testplan][entity_type][entity_name] = value
 
     def comment_summary(self):
         """Returns HTML comment for the top-level summary."""
@@ -68,71 +108,77 @@ class Comments:
                 .get("testpoint_comments", {})
                 .get(testpoint, "")
             )
-            matched = self.estimations_regex.match(data)
-            if matched:
-                comment = matched.group(1)
-                stem = PurePath(filename).stem
-                if stem not in self.estimations:
-                    self.estimations[stem] = {}
-                if "testpoints" not in self.estimations[stem]:
-                    self.estimations[stem]["testpoints"] = {}
-                self.estimations[stem]["testpoints"][testpoint] = int(matched.group(2))
-            else:
-                comment = data
+            testplan = PurePath(filename).stem
+            comment = self.parse_comment(testplan, "testpoints", testpoint, data)
         if comment:
             return f'<br/><span class="comment">{self.htmlify(comment)}</span>'
         return ""
 
-    def _check_dict(self, firstkey, midkey=None, lastkey=None):
-        if firstkey not in self.estimations:
+    def _check_dict(self, dict_to_check, firstkey, midkey=None, lastkey=None):
+        if firstkey not in dict_to_check:
             return False
-        if midkey and midkey not in self.estimations[firstkey]:
+        if midkey and midkey not in dict_to_check[firstkey]:
             return False
-        if lastkey and (
-            not midkey or lastkey not in self.estimations[firstkey][midkey]
-        ):
+        if lastkey and (not midkey or lastkey not in dict_to_check[firstkey][midkey]):
             return False
         return True
 
-    def get_testpoint_estimation(self, filename, testpoint):
-        plan_name = PurePath(filename).stem
-        if self._check_dict(plan_name, "testpoints", testpoint):
-            return f"""<br/><span class="comment">{
+    def render_entry_metadata(self, testplan, entity_type, entity_name):
+        result = ""
+        if self._check_dict(self.estimations, testplan, entity_type, entity_name):
+            result += f"""<br/><span class="comment">{
                 self.htmlify(
                     (
                         "Estimate: "
-                        + str(self.estimations[plan_name]["testpoints"][testpoint])
+                        + str(self.estimations[testplan][entity_type][entity_name])
                         + " "
                         + self.estimations_unit
                     ).rstrip()
                 )
             }</span>"""
-        return ""
+        if self._check_dict(self.owners, testplan, entity_type, entity_name):
+            result += f"""<br/><span class="comment">{
+                self.htmlify(
+                    (
+                        "Owner: " + self.owners[testplan][entity_type][entity_name]
+                    ).rstrip()
+                )
+            }</span>"""
+        if self._check_dict(self.status, testplan, entity_type, entity_name):
+            result += f"""<br/><span class="comment">{
+                self.htmlify(
+                    (
+                        "Status: " + self.status[testplan][entity_type][entity_name]
+                    ).rstrip()
+                )
+            }</span>"""
+        if self._check_dict(self.issues, testplan, entity_type, entity_name):
+            result += f"""<br/><span class="comment">{
+                self.htmlify(
+                    (
+                        "Issues: " + self.issues[testplan][entity_type][entity_name]
+                    ).rstrip()
+                )
+            }</span>"""
+        return result
 
-    def get_test_estimation(self, filename, test):
+    def get_testpoint_metadata(self, filename, testpoint):
         plan_name = PurePath(filename).stem
-        if self._check_dict(plan_name, "tests", test):
-            return f"""<br/><span class="comment">{
-                self.htmlify(
-                    (
-                        "Estimate: "
-                        + str(self.estimations[plan_name]["tests"][test])
-                        + " "
-                        + self.estimations_unit
-                    ).rstrip()
-                )
-            }</span>"""
-        return ""
+        return self.render_entry_metadata(plan_name, "testpoints", testpoint)
+
+    def get_test_metadata(self, filename, test):
+        plan_name = PurePath(filename).stem
+        return self.render_entry_metadata(plan_name, "tests", test)
 
     def get_estimation_totals(self, filename):
         plan_name = PurePath(filename).stem
-        if self._check_dict(plan_name):
+        if self._check_dict(self.estimations, plan_name):
             test_total = 0
             testpoint_total = 0
-            if self._check_dict(plan_name, "tests"):
+            if self._check_dict(self.estimations, plan_name, "tests"):
                 for value in self.estimations[plan_name]["tests"].values():
                     test_total += value
-            if self._check_dict(plan_name, "testpoints"):
+            if self._check_dict(self.estimations, plan_name, "testpoints"):
                 for value in self.estimations[plan_name]["testpoints"].values():
                     testpoint_total += value
             total_str = f"Total estimate: {test_total + testpoint_total} {self.estimations_unit}".rstrip()
@@ -149,17 +195,8 @@ class Comments:
             .get("test_comments", {})
             .get(test, "")
         )
-        matched = self.estimations_regex.match(data)
-        if matched:
-            comment = matched.group(1)
-            stem = PurePath(filename).stem
-            if stem not in self.estimations:
-                self.estimations[stem] = {}
-            if "tests" not in self.estimations[stem]:
-                self.estimations[stem]["tests"] = {}
-            self.estimations[stem]["tests"][test] = int(matched.group(2))
-        else:
-            comment = data
+        testplan = PurePath(filename).stem
+        comment = self.parse_comment(testplan, "tests", test, data)
         if comment:
             return f'<br/><span class="comment">{self.htmlify(comment)}</span>'
         return ""

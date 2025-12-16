@@ -1020,7 +1020,7 @@ class Testplan:
                 # for now comments will only work in HTML
                 if self.comments:
                     tp_text += self.comments.comment_testpoint(self.filename, tp_name)
-                    tp_text += self.comments.get_testpoint_estimation(
+                    tp_text += self.comments.get_testpoint_metadata(
                         self.filename, tp_name
                     )
                 tp_name = tp_text
@@ -1074,9 +1074,7 @@ class Testplan:
                 # for now comments will only work in HTML
                 if "html" in format and self.comments:
                     test_name += self.comments.comment_test(self.filename, tr.name)
-                    test_name += self.comments.get_test_estimation(
-                        self.filename, tr.name
-                    )
+                    test_name += self.comments.get_test_metadata(self.filename, tr.name)
 
                 stage_text = ""
                 if not skip_stages and is_new_stage:
