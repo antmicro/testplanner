@@ -13,7 +13,7 @@ from testplanner.Testplan import Testplan
 
 
 class Comments:
-    def __init__(self, comments_file):
+    def __init__(self, comments_file, allow_test_level_metadata):
         """Constructs the commenting utility."""
         # TODO: extract HJSON parsing to some common module
         self.comments = Testplan._parse_hjson(comments_file)
@@ -24,6 +24,7 @@ class Comments:
         self.status = {}
         self.issues = {}
         self.estimations_unit = self.comments.get("estimations_unit", "")
+        self.allow_test_level_metadata = allow_test_level_metadata
         self.metadata_regex = re.compile(
             r"(?P<content>.*?)(\[(?P<estimate>[0-9]+(\.[0-9]+)?)\])?(\s*\{((?P<status>[a-zA-Z]+))?(\s*(?P<owner>\@[^\s]+))?(?P<issues>(\s*#[0-9]+)*)\})?$"
         )
@@ -41,6 +42,13 @@ class Comments:
         matched = self.metadata_regex.match(data)
         if not matched:
             return data
+
+        if not self.allow_test_level_metadata and entity_type == "tests":
+            disallowed_entities = ["owner", "status", "estimate", "issues"]
+            if any([matched.group(entry) for entry in disallowed_entities]):
+                raise RuntimeError(
+                    f"Using metadata in tests' comments is not allowed (testplan {testplan}, test {entity_name})"
+                )
 
         comment = matched.group("content") if matched.group("content") else ""
 

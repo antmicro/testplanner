@@ -214,6 +214,11 @@ def main():
         type=str,
     )
     parser.add_argument(
+        "--allow-test-level-metadata",
+        help="Allows defining metadata (such as owner or status) at test level",
+        action="store_true",
+    )
+    parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable debug prints."
     )
 
@@ -275,7 +280,7 @@ def main():
 
     comments = None
     if args.comments_file and Path(args.comments_file).exists():
-        comments = Comments(args.comments_file)
+        comments = Comments(args.comments_file, args.allow_test_level_metadata)
 
     if args.testplan_spreadsheet:
         from shutil import copyfile
@@ -349,27 +354,35 @@ def main():
 
         relative_url = None
         if output_sim_results:
-            with open(output_sim_path, "a" if output_sim_results_single else "w") as f:
-                if args.output_summary:
-                    relative_url = os.path.join(
-                        os.path.relpath(
-                            args.output_summary.parent, start=output_sim_path.parent
-                        ),
-                        args.output_summary.name,
-                    )
-                    f.write(
-                        testplan_obj.get_sim_results(
-                            sim_result,
-                            relative_url,
-                            repo_root,
-                            args.repository_name,
-                            fmt=format,
+            try:
+                with open(
+                    output_sim_path, "a" if output_sim_results_single else "w"
+                ) as f:
+                    if args.output_summary:
+                        relative_url = os.path.join(
+                            os.path.relpath(
+                                args.output_summary.parent, start=output_sim_path.parent
+                            ),
+                            args.output_summary.name,
                         )
-                    )
-                    f.write("\n")
-            copy2(STYLES_DIR / "main.css", output_sim_path.parent)
-            copy2(STYLES_DIR / "cov.css", output_sim_path.parent)
-            copytree(ASSETS_DIR, output_sim_path.parent / "assets", dirs_exist_ok=True)
+                        f.write(
+                            testplan_obj.get_sim_results(
+                                sim_result,
+                                relative_url,
+                                repo_root,
+                                args.repository_name,
+                                fmt=format,
+                            )
+                        )
+                        f.write("\n")
+                copy2(STYLES_DIR / "main.css", output_sim_path.parent)
+                copy2(STYLES_DIR / "cov.css", output_sim_path.parent)
+                copytree(
+                    ASSETS_DIR, output_sim_path.parent / "assets", dirs_exist_ok=True
+                )
+            except RuntimeError as ex:
+                print(ex)
+                return 1
 
         if args.output_summary:
             tests_summary.append(
@@ -617,4 +630,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    sys.exit(main(sys.argv[1:]))
