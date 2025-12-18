@@ -144,8 +144,8 @@ def main():
     )
     parser.add_argument(
         "--testplan-file-map-search-engine",
-        help="Type of engine to use for searching files. Can be glob or regex",
-        choices=["glob", "regex"],
+        help="Type of engine to use for searching files. Can be glob, regex or fdfind (also regex-based)",
+        choices=["glob", "regex", "fdfind"],
         default="glob",
     )
     parser.add_argument(

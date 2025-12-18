@@ -6,7 +6,9 @@
 Class parsing the resource mapping files for testplanner.
 """
 
+import os
 import re
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -37,8 +39,8 @@ def glob_resources(
     pattern: str
         String with pattern specifying files to look for
     engine: Optional[str]
-        Engine to use for the search. Can be "glob", "regex"
-        or None to use the default approach for Testplan
+        Engine to use for the search. Can be "glob", "regex",
+        "fdfind" or None to use the default approach for Testplan
         (stored in self.resource_search_engine).
 
     Returns
@@ -46,18 +48,29 @@ def glob_resources(
     list[Path]:
         List of files matching the pattern
     """
-    glob_pattern = pattern
-    if engine == "regex":
-        glob_pattern = "*"
-    results = sorted(base_dir.rglob(glob_pattern))
     if engine == "glob":
+        results = sorted(base_dir.rglob(pattern))
         return results
-
-    def regex_filter(entry):
-        return re.fullmatch(pattern, str(entry))
-
-    result = sorted(filter(regex_filter, results))
-    return result
+    elif engine == "fdfind":
+        fdfind_binary = os.getenv("FDFIND_BINARY", "fdfind")
+        results = (
+            subprocess.check_output(
+                f'{fdfind_binary} -p -t f -j $(nproc) --regex "^{pattern}$" {base_dir}',
+                shell=True,
+            )
+            .decode("utf-8")
+            .strip()
+        )
+        if not results:
+            return []
+        return sorted([Path(result) for result in results.split("\n")])
+    results = []
+    for root, _, filepaths in os.walk(base_dir):
+        for filepath in filepaths:
+            path = Path(root) / filepath
+            if re.fullmatch(pattern, str(path)):
+                results.append(path)
+    return sorted(results)
 
 
 class ResourceMap:
