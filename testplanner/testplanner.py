@@ -219,6 +219,11 @@ def main():
         action="store_true",
     )
     parser.add_argument(
+        "--fail-on-unused-comments",
+        help="Fails testplanner if there are comments for testpoints or tests that are unused",
+        action="store_true",
+    )
+    parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable debug prints."
     )
 
@@ -625,6 +630,20 @@ def main():
                 f.write(Testplan.render_template(data))
             else:
                 f.write(summary)
+
+    if args.fail_on_unused_comments:
+        unused_logs = comments.get_unused_logs()
+        if len(unused_logs) > 0:
+            print("Comments for non-existing entities:")
+        for testplan, entity_type, entity_name in unused_logs:
+            if entity_type is None:
+                print(f"* {testplan=} is not present")
+            elif entity_name is None:
+                print(f"* {testplan=} {entity_type} - all not present")
+            else:
+                print(f"* {testplan=} {entity_type}={entity_name}")
+        if len(unused_logs) > 0:
+            return 1
 
     return 0
 

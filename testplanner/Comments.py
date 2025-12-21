@@ -18,12 +18,16 @@ class Comments:
         # TODO: extract HJSON parsing to some common module
         self.comments = Testplan._parse_hjson(comments_file)
         self.link_regexes = self.comments.get("link_regexes", [])
-        del self.comments["link_regexes"]
+        if "link_regexes" in self.comments:
+            del self.comments["link_regexes"]
         self.estimations = {}
         self.owners = {}
         self.status = {}
         self.issues = {}
+        self.used_logs = {}
         self.estimations_unit = self.comments.get("estimations_unit", "")
+        if "estimations_unit" in self.comments:
+            del self.comments["estimations_unit"]
         self.allow_test_level_metadata = allow_test_level_metadata
         self.metadata_regex = re.compile(
             r"(?P<content>.*?)(\[(?P<estimate>[0-9]+(\.[0-9]+)?)\])?(\s*\{((?P<status>[a-zA-Z]+))?(\s*(?P<owner>\@[^\s]+))?(?P<issues>(\s*#[0-9]+)*)\})?$"
@@ -104,6 +108,9 @@ class Comments:
             .get(stage, None)
         )
         if comment:
+            self._update_metadata(
+                self.used_logs, PurePath(filename).stem, "stages", stage, True
+            )
             return f'<br/><span class="comment">{self.htmlify(comment)}</span>'
         return ""
 
@@ -118,6 +125,14 @@ class Comments:
             )
             testplan = PurePath(filename).stem
             comment = self.parse_comment(testplan, "testpoints", testpoint, data)
+            if data:
+                self._update_metadata(
+                    self.used_logs,
+                    PurePath(filename).stem,
+                    "testpoints",
+                    testpoint,
+                    True,
+                )
         if comment:
             return f'<br/><span class="comment">{self.htmlify(comment)}</span>'
         return ""
@@ -206,6 +221,10 @@ class Comments:
         )
         testplan = PurePath(filename).stem
         comment = self.parse_comment(testplan, "tests", test, data)
+        if data:
+            self._update_metadata(
+                self.used_logs, PurePath(filename).stem, "tests", test, True
+            )
         if comment:
             return f'<br/><span class="comment">{self.htmlify(comment)}</span>'
         return ""
@@ -233,3 +252,31 @@ class Comments:
         text = self.combined_link_regex.sub(lambda m: linkify_single(m.group()), text)
 
         return text
+
+    def get_unused_logs(self):
+        """Returns list of unused comments."""
+        unused_logs = []
+        for testplan_candidate, testplan_data in self.comments.items():
+            if any(
+                [
+                    q in testplan_data
+                    for q in ["testpoint_comments", "test_comments", "stage_comments"]
+                ]
+            ):
+                if testplan_candidate not in self.used_logs:
+                    unused_logs.append([testplan_candidate, None, None])
+
+            def check(comment_type, entity_type):
+                if comment_type in testplan_data and testplan_data[comment_type]:
+                    if entity_type not in self.used_logs[testplan_candidate]:
+                        unused_logs.append([testplan_candidate, entity_type, None])
+                        return None
+                    subcomments = testplan_data[comment_type]
+                    for entry in subcomments.keys():
+                        if entry not in self.used_logs[testplan_candidate][entity_type]:
+                            unused_logs.append([testplan_candidate, entity_type, entry])
+
+            check("stage_comments", "stages")
+            check("testpoint_comments", "testpoints")
+            check("test_comments", "tests")
+        return unused_logs
