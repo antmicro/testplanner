@@ -156,7 +156,7 @@ def main():
                             f'Path in XML test "{tdata["file"]}" is outside "{test_root_dir.resolve()}"'
                         )
         out_hjson = {
-            "timestamp": datetime.now().strftime("%D/%M/%Y %H:%M"),
+            "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M"),
             "test_results": [val for val in tests_stats.values()],
         }
         out_path = args.output_dir / testplanpath.relative_to(testplan_root_dir)
