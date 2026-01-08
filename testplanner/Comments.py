@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Antmicro <www.antmicro.com>
+# Copyright (c) 2025-2026 Antmicro <www.antmicro.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -13,8 +13,25 @@ from testplanner.Testplan import Testplan
 
 
 class Comments:
-    def __init__(self, comments_file, allow_test_level_metadata):
-        """Constructs the commenting utility."""
+    def __init__(
+        self,
+        comments_file: str,
+        allow_test_level_metadata: bool = True,
+        implemented_status_strings: list[bool] = [],
+    ):
+        """Constructs the commenting utility.
+
+        Parameters
+        ----------
+        comments_file: str
+            Input comment file
+        allow_test_level_metadata: bool
+            Tells whether comments can be defined for individual tests
+        implemented_status_strings: list[bool]
+            List of status types that determine if the testplan is implemented.
+            Without this, the default behavior is to assume executed tests as
+            implemented.
+        """
         # TODO: extract HJSON parsing to some common module
         self.comments = Testplan._parse_hjson(comments_file)
         self.link_regexes = self.comments.get("link_regexes", [])
@@ -29,6 +46,7 @@ class Comments:
         if "estimations_unit" in self.comments:
             del self.comments["estimations_unit"]
         self.allow_test_level_metadata = allow_test_level_metadata
+        self.implemented_status_strings = implemented_status_strings
         self.metadata_regex = re.compile(
             r"(?P<content>.*?)(\[(?P<estimate>[0-9]+(\.[0-9]+)?)\])?(\s*\{((?P<status>[a-zA-Z]+))?(\s*(?P<owner>\@[^\s]+))?(?P<issues>(\s*#[0-9]+)*)\})?$"
         )
@@ -41,6 +59,22 @@ class Comments:
         except re.error:
             print(f"Error: regex '{r['regex']}' in comment file is invalid.")
             sys.exit(1)
+
+    def get_status(self, testplan, entity_type, entity_name):
+        if not self.status:
+            return None
+        data = self.status.get(testplan, {}).get(entity_type, {}).get(entity_name, None)
+        return data
+
+    def is_implemented_status(self, testplan, testpoint_name, test_name):
+        if not self.implemented_status_strings:
+            return None
+        status = self.get_status(testplan, "tests", test_name)
+        if status is None:
+            status = self.get_status(testplan, "testpoints", testpoint_name)
+        if status in self.implemented_status_strings:
+            return True
+        return False
 
     def parse_comment(self, testplan, entity_type, entity_name, data):
         matched = self.metadata_regex.match(data)

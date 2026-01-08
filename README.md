@@ -2,7 +2,7 @@
 
 Copyright (c) 2019-2025 [lowRISC](https://lowrisc.org/)
 
-Copyright (c) 2025 [Antmicro](https://www.antmicro.com)
+Copyright (c) 2025-2026 [Antmicro](https://www.antmicro.com)
 
 A tool for parsing testplans written in Hjson format into a data structure that can be used for:
 * Expanding the testplan inline within the DV document as a table;

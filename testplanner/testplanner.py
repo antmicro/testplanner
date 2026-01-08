@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Copyright (c) 2019-2024 lowRISC <lowrisc.org>
-# Copyright (c) 2025 Antmicro <www.antmicro.com>
+# Copyright (c) 2025-2026 Antmicro <www.antmicro.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 r"""Command-line tool to parse and process testplan Hjson"""
@@ -224,6 +224,11 @@ def main():
         action="store_true",
     )
     parser.add_argument(
+        "--implemented-status-strings",
+        help="List of status types in comments that indicate that the testplan is implemented",
+        nargs="+",
+    )
+    parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable debug prints."
     )
 
@@ -285,7 +290,11 @@ def main():
 
     comments = None
     if args.comments_file and Path(args.comments_file).exists():
-        comments = Comments(args.comments_file, args.allow_test_level_metadata)
+        comments = Comments(
+            args.comments_file,
+            args.allow_test_level_metadata,
+            args.implemented_status_strings,
+        )
 
     if args.testplan_spreadsheet:
         from shutil import copyfile

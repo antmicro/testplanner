@@ -1,5 +1,5 @@
 # Copyright (c) 2019-2024 lowRISC <lowrisc.org>
-# Copyright (c) 2025 Antmicro <www.antmicro.com>
+# Copyright (c) 2025-2026 Antmicro <www.antmicro.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -882,6 +882,8 @@ class Testplan:
 
             tp_name = testpoint.name
 
+            if self.comments:
+                self.comments.comment_testpoint(self.filename, tp_name)
             for tr in testpoint.test_results:
                 if not tr:
                     continue
@@ -892,10 +894,21 @@ class Testplan:
                 tests_seen.add((ms, tp_name, tr.name))
                 # Compute the testplan progress.
                 self.progress[ms]["total"] += 1
+                implemented = None
+                if self.comments:
+                    self.comments.comment_test(self.filename, tr.name)
+                    implemented = self.comments.is_implemented_status(
+                        self.filename.stem,
+                        tp_name,
+                        tr.name,
+                    )
+                    if implemented:
+                        self.progress[ms]["written"] += 1
                 if tr.total != 0:
                     self.progress[ms]["passing_runs"] += tr.passing
                     self.progress[ms]["total_runs"] += tr.total
-                    self.progress[ms]["written"] += 1
+                    if implemented is None:
+                        self.progress[ms]["written"] += 1
 
                 # Compute the stage total & the grand total.
                 totals[ms].test_results[0].passing += tr.passing
@@ -1405,6 +1418,8 @@ class Testplan:
 
         tests_seen = set()
         for tp in self.testpoints:
+            if self.comments:
+                self.comments.comment_testpoint(self.filename, tp.name)
             for tr in tp.test_results:
                 if not tr:
                     continue
@@ -1415,10 +1430,19 @@ class Testplan:
                 if (tp.name, tr.name) in tests_seen:
                     continue
                 tests_seen.add((tp.name, tr.name))
+                implemented = None
+                if self.comments:
+                    self.comments.comment_test(self.filename, tr.name)
+                    implemented = self.comments.is_implemented_status(
+                        self.filename.stem, tp.name, tr.name
+                    )
+                    if implemented:
+                        written += 1
                 if tr.total != 0:
                     passing_runs += tr.passing
                     total_runs += tr.total
-                    written += 1
+                    if implemented is None:
+                        written += 1
                 total += 1
         path_rel = os.path.relpath(
             target_sim_results_path.parent, start=summary_output_path.parent
@@ -1481,6 +1505,8 @@ class Testplan:
             )
         for tp in self.testpoints:
             stage = tp.stage
+            if self.comments:
+                self.comments.comment_testpoint(self.filename, tp.name)
             for tr in tp.test_results:
                 if not tr:
                     continue
@@ -1494,11 +1520,20 @@ class Testplan:
 
                 tests_seen.add((stage, tp.name, tr.name))
 
+                implemented = None
+                if self.comments:
+                    self.comments.comment_test(self.filename, tr.name)
+                    implemented = self.comments.is_implemented_status(
+                        self.filename.stem, tp.name, tr.name
+                    )
+                    if implemented:
+                        stages_progress[stage]["written"] += 1
                 stages_progress[stage]["total"] += 1
                 if tr.total != 0:
                     stages_progress[stage]["passing_runs"] += tr.passing
                     stages_progress[stage]["total_runs"] += tr.total
-                    stages_progress[stage]["written"] += 1
+                    if implemented is None:
+                        stages_progress[stage]["written"] += 1
 
         return stages_progress
 
