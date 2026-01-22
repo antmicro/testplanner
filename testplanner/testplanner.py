@@ -22,6 +22,7 @@ from tabulate import tabulate
 
 import testplanner.template as html_templates
 from testplanner.Comments import Comments
+from testplanner.Table import Table
 from testplanner.Testplan import (
     COMPLETE_TESTPLAN_HEADER,
     SUMMARY_TOKEN,
@@ -231,6 +232,18 @@ def main():
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable debug prints."
     )
+    parser.add_argument(
+        "--additional-files-path",
+        help="Base path to additional files included in documentation",
+        default="",
+        type=str,
+    )
+    parser.add_argument(
+        "--additional-files-summary",
+        help="File with a list of comma-separated paths of additional files included in documentation",
+        default="",
+        type=str,
+    )
 
     args = parser.parse_args()
 
@@ -309,6 +322,38 @@ def main():
         xls = XLSX_writer(args.testplan_spreadsheet)
 
     stages_progress = None
+
+    # Process additional files
+    if args.additional_files_summary and args.additional_files_path:
+        with open(args.additional_files_summary, "r") as file:
+            file_contents = file.read()
+            additional_files = [
+                Path(f.strip()) for f in file_contents.split(",") if f.strip()
+            ]
+
+        CSV_FILE_FORMAT = ".csv"
+        for additional_file in additional_files:
+            additional_file_path = os.path.join(
+                args.additional_files_path, additional_file
+            )
+            if not additional_file_path.endswith(CSV_FILE_FORMAT):
+                logging.debug(
+                    f"Currently only additional files in CSV format are supported: {additional_file}"
+                )
+                continue
+
+            output_file_path = Path(
+                os.path.abspath(
+                    os.path.join(
+                        output_sim_results,
+                        Path(additional_file.name).with_suffix(".html"),
+                    )
+                )
+            )
+            output_file_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_file_path, "w") as file:
+                table_converter = Table(additional_file_path)
+                file.write(table_converter.get_html())
 
     # Process testplans
     for id, testplan in enumerate(testplans):
