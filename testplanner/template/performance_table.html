@@ -9,6 +9,51 @@
 </head>
 <body>
     <div class="content">
+        <header>
+            <nav class="navbar">
+                <div class="nav-left">
+                    <div class="nav-urls">
+                        <a href="javascript:window.history.back();" class="button tooltip">
+                            <img src="assets/caret.svg" alt="Back" style="transform: scale(-2) translatey(-1px);" />
+                            <span class="tooltip-text tooltip-text-right">Go Back</span>
+                        </a>
+                    </div>
+
+                    <span class="container-title">
+                        {{title}}
+                    </span>
+
+                </div>
+                {% if(git_repo or git_branch or git_sha or timestamp) %}
+                <div class="nav-right">
+                    {% if(timestamp) %}
+                    <div class="nav-item">
+                        <img src="./assets/date.svg" alt="Run on"/>
+                        {{ timestamp }}
+                    </div>
+                    {% endif %}
+                    {% if(git_repo) %}
+                    <div class="nav-item">
+                        <img src="./assets/repo.svg" alt="Run on"/>
+                        {{ git_repo }}
+                    </div>
+                    {% endif %}
+                    {% if(git_branch) %}
+                    <div class="nav-item">
+                        <img src="./assets/branch.svg" alt="Run on"/>
+                        {{ git_branch }}
+                    </div>
+                    {% endif %}
+                    {% if(git_sha) %}
+                    <div class="nav-item">
+                        <img src="./assets/commit.svg" alt="Run on"/>
+                        {{git_sha}}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </nav>
+        </header>
         <center class='results'>
         <div class="page-wrapper">
             <div class="test-results">

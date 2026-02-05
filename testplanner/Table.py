@@ -7,6 +7,7 @@ r"""Utility for converting CSV tables"""
 import csv
 from html import escape
 from importlib.resources import path
+from pathlib import Path
 
 from jinja2 import Template
 
@@ -28,7 +29,7 @@ class Table:
         content = tm.render(data)
         return content
 
-    def get_html(self):
+    def get_html(self, base_template_data):
         table_html = ""
         with open(self.csv_file_path, newline="") as csv_file:
             reader = csv.reader(csv_file)
@@ -42,6 +43,7 @@ class Table:
                 table_html += "</tr>\n"
 
             table_html += "</table>\n"
-        data = {}
+        data = base_template_data
         data["perf_results_table"] = table_html
+        data["title"] = Path(self.csv_file_path).stem.replace("_", " ").title()
         return self.render_template(data)

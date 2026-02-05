@@ -325,6 +325,17 @@ def main():
 
     # Process additional files
     if args.additional_files_summary and args.additional_files_path:
+        data = {
+            "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M"),
+        }
+        if args.project_root:
+            data["git_repo"], data["git_branch"], data["git_sha"] = parse_repo_data(
+                args.repository_name,
+                args.project_root,
+                source_url_prefix,
+                git_branch_prefix,
+                git_commit_prefix,
+            )
         with open(args.additional_files_summary, "r") as file:
             file_contents = file.read()
             additional_files = [
@@ -353,7 +364,7 @@ def main():
             output_file_path.parent.mkdir(parents=True, exist_ok=True)
             with open(output_file_path, "w") as file:
                 table_converter = Table(additional_file_path)
-                file.write(table_converter.get_html())
+                file.write(table_converter.get_html(data))
 
     # Process testplans
     for id, testplan in enumerate(testplans):
