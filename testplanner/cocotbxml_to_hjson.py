@@ -83,9 +83,11 @@ def main():
     # simulated_time/job_runtime to what they should be
 
     for resultspath in args.input_xmls:
+        logging.info(f"Parsing XML results from: {resultspath}")
         root = ET.parse(resultspath).getroot()
         for testcase in root.findall(".//testcase"):
             tname = testcase.attrib["name"]
+            logging.info(f"Processing testcase: {tname}")
             if tname.startswith("test_"):
                 tname = tname[5:]
             if matched := re.match(r"^(.+)_(\d+)$", tname):
@@ -119,14 +121,25 @@ def main():
                 entry["job_runtime"] = [float(testcase.attrib["time"])]
                 test_names_to_entries[tname] = entry
 
+    logging.info(f"Total unique tests parsed from XMLs: {len(test_names_to_entries)}")
+
     for testplanpath in args.input_testplans:
         testplanpath = testplanpath.resolve()
+        logging.info(f"Loading testplan: {testplanpath}")
         tests_stats = dict()
         with open(testplanpath, "r") as f:
             testplan = hjson.load(f)
         for testpoint in testplan["testpoints"]:
             for test in testpoint["tests"]:
+                if test.startswith("test_"):
+                    logging.warning(
+                        f"Test '{test}' in HJSON testplan '{testplanpath.name}' starts with 'test_'. It may not be recognized properly in the testplan."
+                    )
+
                 if test not in test_names_to_entries:
+                    logging.warning(
+                        f"Skipped test '{test}' from testplan (not found in XML results)."
+                    )
                     continue
                 tdata = test_names_to_entries[test]
                 if test in tests_stats:
@@ -161,6 +174,7 @@ def main():
         }
         out_path = args.output_dir / testplanpath.relative_to(testplan_root_dir)
         out_path.parent.mkdir(parents=True, exist_ok=True)
+        logging.info(f"Writing test results to: {out_path}")
         with out_path.open("w") as f:
             hjson.dump(out_hjson, f)
     return 0
