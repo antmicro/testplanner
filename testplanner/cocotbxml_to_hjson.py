@@ -8,10 +8,12 @@ Converter of xunit-like XML files with test results from cocotb to HJSON.
 """
 
 import argparse
+import json
 import logging
 import re
 import sys
 import xml.etree.ElementTree as ET
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from statistics import mean
@@ -63,6 +65,11 @@ def main():
         type=Path,
     )
     parser.add_argument(
+        "--test-tracking-summary-dir",
+        help="Directory of files with summary on test tracking",
+        type=Path,
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Enable debug prints.",
@@ -79,8 +86,12 @@ def main():
 
     test_names_to_entries = dict()
 
+    test_names_to_files = defaultdict(list)
+
     # TODO (glatosinski): We need to adjust passing/total and
     # simulated_time/job_runtime to what they should be
+
+    all_tests = set()
 
     for resultspath in args.input_xmls:
         logging.info(f"Parsing XML results from: {resultspath}")
@@ -110,6 +121,7 @@ def main():
                 test_names_to_entries[tname]["job_runtime"].append(
                     float(testcase.attrib["time"])
                 )
+                test_names_to_files[tname].append(str(resultspath))
             else:
                 entry = testcase.attrib
                 entry["skipped"] = len(testcase.findall("skipped"))
@@ -120,8 +132,14 @@ def main():
                 entry["simulated_time"] = [float(testcase.attrib["sim_time_ns"])]
                 entry["job_runtime"] = [float(testcase.attrib["time"])]
                 test_names_to_entries[tname] = entry
+                test_names_to_files[tname].append(str(resultspath))
+
+            all_tests.add(tname)
 
     logging.info(f"Total unique tests parsed from XMLs: {len(test_names_to_entries)}")
+
+    used_tests = set()
+    missing_results = set()
 
     for testplanpath in args.input_testplans:
         testplanpath = testplanpath.resolve()
@@ -140,6 +158,7 @@ def main():
                     logging.warning(
                         f"Skipped test '{test}' from testplan (not found in XML results)."
                     )
+                    missing_results.add(test)
                     continue
                 tdata = test_names_to_entries[test]
                 if test in tests_stats:
@@ -168,6 +187,8 @@ def main():
                         logging.warning(
                             f'Path in XML test "{tdata["file"]}" is outside "{test_root_dir.resolve()}"'
                         )
+                used_tests.add(test)
+
         out_hjson = {
             "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M"),
             "test_results": [val for val in tests_stats.values()],
@@ -177,6 +198,34 @@ def main():
         logging.info(f"Writing test results to: {out_path}")
         with out_path.open("w") as f:
             hjson.dump(out_hjson, f)
+
+        if args.test_tracking_summary_dir:
+            args.test_tracking_summary_dir.mkdir(parents=True, exist_ok=True)
+            with (args.test_tracking_summary_dir / "tests-to-files.hjson").open(
+                "w"
+            ) as f:
+                hjson.dump(test_names_to_files, f, indent=4)
+
+            unmapped_tests = list(all_tests - used_tests)
+
+            if len(unmapped_tests) > 0:
+                print("There are unmapped tests")
+            for test in unmapped_tests:
+                print(test)
+
+            with (args.test_tracking_summary_dir / "unmapped-tests.hjson").open(
+                "w"
+            ) as f:
+                json.dump(
+                    {
+                        "used": sorted(list(used_tests)),
+                        "unused": sorted(list(unmapped_tests)),
+                        "missing_results": sorted(list(missing_results)),
+                    },
+                    f,
+                    indent=4,
+                )
+
     return 0
 
 
