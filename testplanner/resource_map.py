@@ -55,7 +55,7 @@ def glob_resources(
         fdfind_binary = os.getenv("FDFIND_BINARY", "fdfind")
         results = (
             subprocess.check_output(
-                f'{fdfind_binary} -p -t f -j $(nproc) --regex "^{pattern}$" {base_dir}',
+                f'{fdfind_binary} -p -t f -j $(nproc) --no-ignore --regex "^{pattern}$" {base_dir}',
                 shell=True,
             )
             .decode("utf-8")
