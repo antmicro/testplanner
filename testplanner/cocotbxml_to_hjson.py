@@ -10,6 +10,7 @@ Converter of xunit-like XML files with test results from cocotb to HJSON.
 import argparse
 import json
 import logging
+import re
 import sys
 import xml.etree.ElementTree as ET
 from collections import defaultdict
@@ -60,7 +61,7 @@ def merge_results(test_result, update):
             assert test_result["lineno"] == update["lineno"]
 
 
-def process_xml(input_xml, project_root_dir, ignore_dirs, all_tests):
+def process_xml(input_xml, project_root_dir, ignore_dirs, expected_names, all_tests):
     root = ET.parse(input_xml).getroot()
     results = defaultdict(
         lambda: {
@@ -77,6 +78,10 @@ def process_xml(input_xml, project_root_dir, ignore_dirs, all_tests):
         logging.info(f"Processing testcase: {tname}")
         if tname.startswith("test_"):
             tname = tname[5:]
+        if tname not in expected_names:
+            if matched := re.match(r"^(.+)_(\d+)$", tname):
+                if matched.group(1) in expected_names:
+                    tname = matched.group(1)
         unsuccessful = len(testcase.findall("skipped")) + len(
             testcase.findall("failure")
         )
@@ -203,9 +208,9 @@ def main():
     used_tests = set()
     missing_results = set()
 
-    xml_results_cache = dict()
-
     for testplanpath in args.input_testplans:
+        xml_results_cache = dict()
+
         testplanpath = testplanpath.resolve()
         testplan = Testplan(
             testplanpath,
@@ -213,6 +218,11 @@ def main():
             resource_map_data=args.testplan_file_map,
         )
         results = []
+        # first collect expected test names for testplan
+        expected_tests = set()
+        for testpoint in testplan.testpoints:
+            for test in testpoint.tests:
+                expected_tests.add(test)
         for testpoint in testplan.testpoints:
             for test in testpoint.tests:
 
@@ -238,20 +248,18 @@ def main():
                     continue
                 cocotb_xml = find_resource("cocotb_xml", args.input_xmls_dir)
                 test_impl = None
-                if not cocotb_xml:
-                    source = find_resource("source", args.project_root_dir)
-                    if len(source):
-                        assert len(source) > 0, (
-                            "There should be only one relevant source"
-                        )
-                        source = source[0]
-                        test_impl = source
-                        template = Path(source).relative_to(args.project_root_dir)
-                        template = template.parent / f"{template.stem}"
-                        template = str(template) + r".*\.xml"
-                        cocotb_xml = glob_resources(
-                            args.input_xmls_dir, template, "regex"
-                        )
+                source = find_resource("source", args.project_root_dir)
+                if len(source):
+                    assert len(source) > 0, "There should be only one relevant source"
+                    source = str(source[0])
+                    test_impl = source
+                else:
+                    source = None
+                if not cocotb_xml and source:
+                    template = Path(source).relative_to(args.project_root_dir)
+                    template = template.parent / f"{template.stem}"
+                    template = str(template) + r".*\.xml"
+                    cocotb_xml = glob_resources(args.input_xmls_dir, template, "regex")
                 if not cocotb_xml:
                     logging.warning(
                         f"No XML results for {testplan.filename=} {testpoint.name=} {test=}"
@@ -265,7 +273,11 @@ def main():
                         processed_tests = xml_results_cache[str(xmlpath)]
                     else:
                         processed_tests = process_xml(
-                            xmlpath, xml_root_dir, ignore_dirs, all_tests
+                            xmlpath,
+                            xml_root_dir,
+                            ignore_dirs,
+                            expected_tests,
+                            all_tests,
                         )
                         xml_results_cache[str(xmlpath)] = processed_tests
                     if test not in processed_tests:
