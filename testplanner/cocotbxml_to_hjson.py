@@ -30,7 +30,7 @@ def merge_avg(avg1, total1, avg2, total2):
     return (avg1 * total1 + avg2 * total2) / (total1 + total2)
 
 
-def merge_results(test_result, update):
+def merge_results(test_result, update, include_logs=False, logs_url_prefix=""):
     test_result["simulated_time"] = merge_avg(
         test_result["simulated_time"],
         test_result["total"],
@@ -45,8 +45,13 @@ def merge_results(test_result, update):
     )
     test_result["passing"] += update["passing"]
     test_result["total"] += update["total"]
-    test_result["passing_logs"].extend(update["passing_logs"])
-    test_result["failing_logs"].extend(update["failing_logs"])
+    if include_logs:
+        test_result["passing_logs"].extend(
+            [f"{logs_url_prefix}{p}" for p in update["passing_logs"]]
+        )
+        test_result["failing_logs"].extend(
+            [f"{logs_url_prefix}{p}" for p in update["failing_logs"]]
+        )
     if "file" in update:
         if "file" not in test_result:
             test_result["file"] = str(update["file"])
@@ -189,6 +194,16 @@ def main():
         type=Path,
     )
     parser.add_argument(
+        "--include-logs",
+        help="Tells whether links to logs should be provided in testplans",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--logs-url-prefix",
+        help="URL prefix for logs to display in testplans",
+        default="",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Enable debug prints.",
@@ -291,17 +306,26 @@ def main():
                             "name": test,
                             "passing": tdata["passing"],
                             "total": tdata["total"],
-                            "passing_logs": tdata["passing_logs"],
-                            "failing_logs": tdata["failing_logs"],
                             "simulated_time": tdata["simulated_time"],
                             "job_runtime": tdata["job_runtime"],
                         }
+                        if args.include_logs:
+                            test_result["passing_logs"] = [
+                                f"{args.logs_url_prefix}{p}"
+                                for p in tdata["passing_logs"]
+                            ]
+                            test_result["failing_logs"] = [
+                                f"{args.logs_url_prefix}{p}"
+                                for p in tdata["failing_logs"]
+                            ]
                         if "file" in tdata:
                             test_result["file"] = tdata["file"]
                         elif test_impl:
                             test_result["file"] = test_impl
                     else:
-                        merge_results(test_result, tdata)
+                        merge_results(
+                            test_result, tdata, args.include_logs, args.logs_url_prefix
+                        )
                     used_tests.add((test, str(xmlpath)))
                 if test_result is not None:
                     results.append(test_result)
