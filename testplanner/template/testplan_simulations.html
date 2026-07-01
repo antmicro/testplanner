@@ -44,7 +44,7 @@
                     {% endif %}
 
                 </div>
-                {% if(git_repo or git_branch or git_sha  or timestamp) %}
+                {% if(git_repo or git_branch or git_sha or timestamp or test_tags) %}
                 <div class="nav-right">
                     {% if(timestamp) %}
                     <div class="nav-item">
@@ -68,6 +68,11 @@
                     <div class="nav-item">
                         <img src="./assets/commit.svg" alt="Run on"/>
                         {{git_sha}}
+                    </div>
+                    {% endif %}
+                    {% if(test_tags) %}
+                    <div class="nav-item">
+                        {{test_tags}}
                     </div>
                     {% endif %}
                 </div>

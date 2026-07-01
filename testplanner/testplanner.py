@@ -27,6 +27,7 @@ from testplanner.Testplan import (
     COMPLETE_TESTPLAN_HEADER,
     SUMMARY_TOKEN,
     Testplan,
+    Testtags,
     get_percentage,
     get_percentage_color,
     parse_repo_data,
@@ -126,7 +127,10 @@ def main():
         "--output-sim-results",
         help="Path to output directory for multiple files's output, path to file for single-file output",
         type=Path,
-        required=any([flag in sys.argv for flag in ["--sim-results", "-s"]]),
+        required=any(
+            [flag in sys.argv for flag in ["--sim-results", "-s"]]
+            + [flag in sys.argv for flag in ["--test-tags", "-tt"]]
+        ),
     )
     parser.add_argument(
         "--sim-results-format",
@@ -250,6 +254,12 @@ def main():
         default="",
         type=str,
     )
+    parser.add_argument(
+        "-tt",
+        "--testtags-file",
+        help="File with a list of test tags and affected tests",
+        type=Path,
+    )
 
     args = parser.parse_args()
 
@@ -276,6 +286,14 @@ def main():
 
     testplans = [Path(os.path.abspath(s)) for s in args.testplans]
     logging.debug(f"testplans = {testplans}")
+
+    testtags_out_path = ""
+    if output_sim_results:
+        testtags_out_path = Path(output_sim_results) / f"testtags.{format}"
+
+    testtags = None
+    if args.testtags_file and Path(args.testtags_file).exists():
+        testtags = Testtags(args.testtags_file, testtags_out_path)
 
     if args.sim_results:
         sim_results = [Path(os.path.abspath(s)) for s in args.sim_results]
@@ -342,6 +360,8 @@ def main():
                 git_branch_prefix,
                 git_commit_prefix,
             )
+        if testtags is not None:
+            data["test_tags"] = f'<a href="{testtags.outfile_path}">Test tags</a>'
         with open(args.additional_files_summary, "r") as file:
             file_contents = file.read()
             additional_files = [
@@ -370,7 +390,9 @@ def main():
             output_file_path.parent.mkdir(parents=True, exist_ok=True)
             with open(output_file_path, "w") as file:
                 table_converter = Table(additional_file_path)
-                file.write(table_converter.get_html(data))
+                file.write(
+                    table_converter.get_html(data, args.output_sim_results_prefix)
+                )
 
     # Process testplans
     for id, testplan in enumerate(testplans):
@@ -398,10 +420,14 @@ def main():
             docs_url_prefix=docs_url_prefix,
             comments=comments,
             resource_search_engine=args.testplan_file_map_search_engine,
+            testtags=testtags,
         )
 
         sim_result = None
         output_sim_path = None
+
+        if testtags:
+            testtags.aggregate_testplan(testplan_obj)
 
         if output_sim_results:
             sim_result = sim_results[id]
@@ -449,6 +475,7 @@ def main():
                                 repo_root,
                                 args.repository_name,
                                 fmt=format,
+                                testtags=testtags,
                             )
                         )
                         f.write("\n")
@@ -488,6 +515,27 @@ def main():
 
         if output_sim_results and args.testplan_spreadsheet:
             testplan_obj.generate_xls_sim_results(xls)
+
+    # Process tags
+    if testtags:
+        try:
+            with open(testtags_out_path, "w") as f:
+                f.write(
+                    testtags.get_file(
+                        format,
+                        output_sim_results,
+                        relative_url,
+                    )
+                )
+                f.write("\n")
+            copy2(STYLES_DIR / "main.css", testtags_out_path.parent)
+            copy2(STYLES_DIR / "cov.css", testtags_out_path.parent)
+            copytree(
+                ASSETS_DIR, testtags_out_path.parent / "assets", dirs_exist_ok=True
+            )
+        except RuntimeError as ex:
+            print(ex)
+            return 1
 
     summary_all_tests_link_flag = False
     if len(tests_all) > 0:
@@ -698,6 +746,10 @@ def main():
                             git_branch_prefix,
                             git_commit_prefix,
                         )
+                    )
+                if testtags is not None:
+                    data["test_tags"] = (
+                        f'<a href="{testtags.outfile_path}">Test tags</a>'
                     )
                 f.write(Testplan.render_template(data))
             else:

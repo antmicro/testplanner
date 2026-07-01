@@ -36,6 +36,7 @@ COMPLETE_TESTPLAN_HEADER = [
     "Total",
     "Pass Rate",
     "Logs",
+    "Tags",
 ]
 
 
@@ -144,6 +145,159 @@ def render_log_entry(number: int, log_url, format: str, passing: bool):
         )
 
 
+class Testtag:
+    """The tag for tests"""
+
+    def __init__(
+        self,
+        name,
+        desc=None,
+        affected_tests=[],
+    ):
+        self.name = name
+        self.desc = desc
+        self.affected_tests = affected_tests
+
+
+class Testtags:
+    """Tags list for tests"""
+
+    def __init__(
+        self,
+        testtags_file,
+        outfile_path,
+    ):
+        self.tags = self.parse(testtags_file)
+        self.outfile_path = outfile_path
+        self.testplans = []
+
+    def aggregate_testplan(self, testplan):
+        self.testplans.append(testplan)
+
+    def get_table(self, output_sim_results, initial_txt, format="pipe"):
+        text = initial_txt
+
+        header = [
+            "Tag name",
+            "Tag description",
+            "Test name",
+            "Times passed",
+            "Times total",
+        ]
+
+        table = []
+        for tag in self.tags:
+            total_affected = 0
+            passed_affected = 0
+
+            for id, test in enumerate(tag.affected_tests):
+                test_name = test["name"]
+                testplan_stem = ""
+                test_result = None
+
+                for tp in self.testplans:
+                    if tp.name == test["testplan"]:
+                        testplan_stem = Path(tp.filename).stem
+
+                    for tpoint in tp.testpoints:
+                        for tres in tpoint.test_results:
+                            if tres.name == test_name:
+                                test_result = tres
+                                break
+
+                total_affected += 1
+                passed_affected += test_result.passing // test_result.total
+
+                if test_result.passing // test_result.total:
+                    passed_count_color = "#22c55e"
+                else:
+                    passed_count_color = "#ef4444"
+
+                if "html" in format:
+                    if id == 0:
+                        table.append(
+                            [
+                                tag.name,
+                                tag.desc,
+                                f"""<span><a href="{output_sim_results}/{testplan_stem}.html#{test_name}">{test_name}</a></span>""",
+                                f"""<span style="color: {passed_count_color}">{test_result.passing}</span>""",
+                                f"""<span>{test_result.total}</span>""",
+                            ]
+                        )
+                    else:
+                        table.append(
+                            [
+                                "",
+                                "",
+                                f"""<span><a href="{output_sim_results}/{testplan_stem}.html#{test_name}">{test_name}</a></span>""",
+                                f"""<span style="color: {passed_count_color}">{test_result.passing}</span>""",
+                                f"""<span>{test_result.total}</span>""",
+                            ]
+                        )
+                else:
+                    if id == 0:
+                        table.append(
+                            [
+                                tag.name,
+                                tag.desc,
+                                f"""[{test_name}]({output_sim_results}/{testplan_stem}.md)""",
+                            ]
+                        )
+                    else:
+                        table.append(
+                            [
+                                "",
+                                "",
+                                f"""[{test_name}]({output_sim_results}/{testplan_stem}.md)""",
+                            ]
+                        )
+
+        colalign = ("center",) * 2 + ("left",) * 2 + ("center",) * 2
+        text += tabulate(table, headers=header, tablefmt=format, colalign=colalign)
+        text += "\n"
+
+        return text
+
+    def get_file(self, format, output_sim_results, output_sim_path):
+        assert format in ["md", "html"]
+        if "html" in format:
+            return self.get_html(output_sim_results, output_sim_path)
+        else:
+            return self.get_markdown(output_sim_results)
+
+    def get_html(self, output_sim_results, output_sim_path):
+        data = {
+            "title": "Test tags",
+            "test_results_table": self.get_table(
+                output_sim_results,
+                format="unsafehtml",
+                initial_txt="<h3>Test tags</h3>",
+            ),
+            "summary_url": f"{output_sim_path}",
+        }
+
+        return Testplan.render_template(data)
+
+    def get_markdown(self, output_sim_results):
+        text = "# Test tags\n"
+        text += self.get_table(output_sim_results, format="md", initial_txt="")
+        return text
+
+    def parse(self, testtags_file):
+        tags = []
+        testtags_hjson = Testplan._parse_hjson(testtags_file)
+        for item in testtags_hjson.get("testtags"):
+            tags.append(
+                Testtag(
+                    name=item.get("name"),
+                    desc=item.get("desc"),
+                    affected_tests=item.get("affected_tests", []),
+                )
+            )
+
+        return tags
+
+
 class Result:
     """The results for a single test"""
 
@@ -159,6 +313,7 @@ class Result:
         passing_logs=None,
         failing_logs=None,
         additional_sources=None,
+        testtags=[],
     ):
         self.name = name
         self.passing = passing
@@ -171,6 +326,7 @@ class Result:
         self.passing_logs = passing_logs if passing_logs else []
         self.failing_logs = failing_logs if failing_logs else []
         self.additional_sources = additional_sources if additional_sources else {}
+        self.testtags = testtags
 
 
 class Element:
@@ -482,6 +638,7 @@ class Testplan:
         docs_url_prefix="",
         comments=None,
         resource_search_engine="",
+        testtags=None,
     ):
         """Initialize the testplan.
 
@@ -507,6 +664,7 @@ class Testplan:
         self.docs_url_prefix = docs_url_prefix.rstrip("/")
         self.comments = comments
         self.resource_search_engine = resource_search_engine
+        self.testtags = testtags
 
         # Split the filename into filename and tags, if provided.
         split = str(filename).split(":")
@@ -1081,13 +1239,25 @@ class Testplan:
         skip_stages = False
         if not (len(stages) > 1 or list(stages)[0] != ""):
             skip_stages = True
-        header = COMPLETE_TESTPLAN_HEADER[
-            (1 if skip_stages else 0) : (None if has_logs else -1)
-        ]
+        header = COMPLETE_TESTPLAN_HEADER.copy()
+
+        center_first_count = 2
+        center_second_count = 7
+
+        if skip_stages:
+            header.remove("Stage")
+            center_first_count -= 1
+        if not has_logs:
+            center_second_count -= 1
+            header.remove("Logs")
+        if tr.testtags:
+            center_second_count -= 1
+            header.remove("Tags")
+
         colalign = (
-            ("center",) * (1 if skip_stages else 2)
+            ("center",) * (center_first_count)
             + ("left",)
-            + ("center",) * (5 + has_logs)
+            + ("center",) * (center_second_count)
         )
         table = []
         self.stage_text_to_stage = {}
@@ -1127,7 +1297,7 @@ class Testplan:
                         file_fmt = tr.file
                         if tr.lineno is not None:
                             file_fmt += f"#L{tr.lineno}"
-                        test_name = f"<a href={self.source_url_prefix}{self.git_file_prefix}/{file_fmt}>{tr.name}</a>"
+                        test_name = f"<a href={self.source_url_prefix}{self.git_file_prefix}/{file_fmt} id={tr.name}>{tr.name}</a>"
                     else:
                         test_name = f"[{tr.name}]({self.source_url_prefix}{self.git_file_prefix}/{tr.file}"
                         if tr.lineno is not None:
@@ -1153,6 +1323,21 @@ class Testplan:
                             ]
                         )
                         test_name += "</div>"
+
+                testtags_text = ""
+                if "html" in format and tr.testtags:
+                    testtags_text += """<div class="tags">"""
+                    testtags_text += "</br>".join(
+                        [
+                            f"<a href=./testtags.html#{k.name}>{k.name}</a>"
+                            for k in tr.testtags
+                        ]
+                    )
+                    testtags_text += "</div>"
+                else:
+                    testtags_text += ",".join(
+                        [f"""[{k.name}](./testtags.md#{k.name})""" for k in tr.testtags]
+                    )
 
                 # for now comments will only work in HTML
                 if "html" in format and self.comments:
@@ -1181,6 +1366,7 @@ class Testplan:
                         f'<span style="color: {pass_rate_color}">{pass_rate}</span>',
                     ]
                     + ([logs] if has_logs else [])
+                    + ([testtags_text] if tr.testtags else [])
                 )
                 stage = ""
                 tp_name = ""
@@ -1320,6 +1506,7 @@ class Testplan:
         repo_path: Union[Path, None] = None,
         repo_name: Union[str, None] = None,
         fmt="md",
+        testtags=None,
     ):
         """Returns the mapped sim result tables in HTML formatted text.
 
@@ -1334,6 +1521,15 @@ class Testplan:
 
         test_results = []
         for item in test_results_:
+            taglist = []
+
+            if testtags:
+                for tag in testtags.tags:
+                    for test in tag.affected_tests:
+                        if test["name"] == item["name"]:
+                            taglist.append(tag)
+                            break
+
             try:
                 tr = Result(
                     item["name"],
@@ -1346,6 +1542,7 @@ class Testplan:
                     passing_logs=item.get("passing_logs", []),
                     failing_logs=item.get("failing_logs", []),
                     additional_sources=item.get("additional_sources", {}),
+                    testtags=taglist,
                 )
                 test_results.append(tr)
             except KeyError as e:
@@ -1420,6 +1617,9 @@ class Testplan:
                 self.git_branch_prefix,
                 self.git_commit_prefix,
             )
+        if self.testtags is not None:
+            data["test_tags"] = f'<a href="{self.testtags.outfile_path}">Test tags</a>'
+
         return Testplan.render_template(data)
 
     def sim_results_markdown(self, summary_output_path):

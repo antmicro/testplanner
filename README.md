@@ -196,6 +196,55 @@ where name is the name of the entity (stage, testpoint, test).
 }
 ```
 
+## Adding testtags to tests
+
+Testplanner supports adding testtags to tests. You can do so by passing `testtags.hjson`
+file using `--testtags-file` option. The comments file consists of:
+
+* `testtags` - list of testtags
+
+### Testtags
+
+Each of entries in `testtags` consists of:
+
+* `name` - name of the tag
+* `desc` - description of the tag
+* `affected_tests` - list of affected tests
+
+### Affected tests
+
+Each of entries in `affected_tests` consists of
+
+* `testplan` - testplan in which the tagged test
+* `name` - name of the test matching the one in matching testplan
+
+### Example
+```yaml
+{
+    "testtags": [
+       {
+            "name": "tag_x",
+            "desc": "tag_x description",
+            "affected_tests": [
+                {
+                    "testplan": "testplan_name",
+                    "name": "test_name"
+                }
+            ]
+       },{
+            "name": "tag_y",
+            "desc": "tag_y description",
+            "affected_tests": [
+                {
+                    "testplan": "testplan_y_name",
+                    "name": "test_y_name"
+                }
+            ]
+       }
+    ]
+}
+```
+
 ## Using cocotb tests' results in testplanner
 
 [cocotb](https://www.cocotb.org/) provides results in XML format conforming to xUnit definition of tests' results.
