@@ -219,7 +219,7 @@ class Testtags:
                             [
                                 tag.name,
                                 tag.desc,
-                                f"""<span><a href="{output_sim_results}/{testplan_stem}.html#{test_name}">{test_name}</a></span>""",
+                                f"""<span><a href="{testplan_stem}.html#{test_name}">{test_name}</a></span>""",
                                 f"""<span style="color: {passed_count_color}">{test_result.passing}</span>""",
                                 f"""<span>{test_result.total}</span>""",
                             ]
@@ -229,7 +229,7 @@ class Testtags:
                             [
                                 "",
                                 "",
-                                f"""<span><a href="{output_sim_results}/{testplan_stem}.html#{test_name}">{test_name}</a></span>""",
+                                f"""<span><a href="{testplan_stem}.html#{test_name}">{test_name}</a></span>""",
                                 f"""<span style="color: {passed_count_color}">{test_result.passing}</span>""",
                                 f"""<span>{test_result.total}</span>""",
                             ]
@@ -240,7 +240,7 @@ class Testtags:
                             [
                                 tag.name,
                                 tag.desc,
-                                f"""[{test_name}]({output_sim_results}/{testplan_stem}.md)""",
+                                f"""[{test_name}]({testplan_stem}.md)""",
                             ]
                         )
                     else:
@@ -248,7 +248,7 @@ class Testtags:
                             [
                                 "",
                                 "",
-                                f"""[{test_name}]({output_sim_results}/{testplan_stem}.md)""",
+                                f"""[{test_name}]({testplan_stem}.md)""",
                             ]
                         )
 
@@ -1618,7 +1618,7 @@ class Testplan:
                 self.git_commit_prefix,
             )
         if self.testtags is not None:
-            data["test_tags"] = f'<a href="{self.testtags.outfile_path}">Test tags</a>'
+            data["test_tags"] = f'<a href="testtags.html">Test tags</a>'
 
         return Testplan.render_template(data)
 
