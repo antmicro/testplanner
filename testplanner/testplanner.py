@@ -293,13 +293,9 @@ def main():
     testplans = [Path(os.path.abspath(s)) for s in args.testplans]
     logging.debug(f"testplans = {testplans}")
 
-    testtags_out_path = ""
-    if output_sim_results:
-        testtags_out_path = Path(output_sim_results) / f"testtags.{format}"
-
     testtags = None
     if args.testtags_file and Path(args.testtags_file).exists():
-        testtags = Testtags(args.testtags_file, testtags_out_path)
+        testtags = Testtags(args.testtags_file)
 
     if args.sim_results:
         sim_results = [Path(os.path.abspath(s)) for s in args.sim_results]
@@ -367,7 +363,7 @@ def main():
                 git_commit_prefix,
             )
         if testtags is not None:
-            data["test_tags"] = f'<a href="{testtags.outfile_path}">Test tags</a>'
+            data["test_tags"] = f'<a href="testtags.html">Test tags</a>'
         with open(args.additional_files_summary, "r") as file:
             file_contents = file.read()
             additional_files = [
@@ -526,7 +522,7 @@ def main():
     # Process tags
     if testtags:
         try:
-            with open(testtags_out_path, "w") as f:
+            with open(f"{output_sim_results}/testtags.{format}", "w") as f:
                 f.write(
                     testtags.get_file(
                         format,
@@ -535,10 +531,10 @@ def main():
                     )
                 )
                 f.write("\n")
-            copy2(STYLES_DIR / "main.css", testtags_out_path.parent)
-            copy2(STYLES_DIR / "cov.css", testtags_out_path.parent)
+            copy2(STYLES_DIR / "main.css", output_sim_results.parent)
+            copy2(STYLES_DIR / "cov.css", output_sim_results.parent)
             copytree(
-                ASSETS_DIR, testtags_out_path.parent / "assets", dirs_exist_ok=True
+                ASSETS_DIR, output_sim_results.parent / "assets", dirs_exist_ok=True
             )
         except RuntimeError as ex:
             print(ex)
@@ -757,7 +753,7 @@ def main():
                     )
                 if testtags is not None:
                     data["test_tags"] = (
-                        f'<a href="{testtags.outfile_path}">Test tags</a>'
+                        f'<a href="testtags.html">Test tags</a>'
                     )
                 f.write(Testplan.render_template(data))
             else:

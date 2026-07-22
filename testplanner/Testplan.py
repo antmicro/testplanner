@@ -165,10 +165,8 @@ class Testtags:
     def __init__(
         self,
         testtags_file,
-        outfile_path,
     ):
         self.tags = self.parse(testtags_file)
-        self.outfile_path = outfile_path
         self.testplans = []
 
     def aggregate_testplan(self, testplan):
