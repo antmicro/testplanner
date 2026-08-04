@@ -363,7 +363,7 @@ def main():
                 git_commit_prefix,
             )
         if testtags is not None:
-            data["test_tags"] = f'<a href="testtags.html">Test tags</a>'
+            data["test_tags"] = '<a href="testtags.html">Test tags</a>'
         with open(args.additional_files_summary, "r") as file:
             file_contents = file.read()
             additional_files = [
@@ -752,9 +752,7 @@ def main():
                         )
                     )
                 if testtags is not None:
-                    data["test_tags"] = (
-                        f'<a href="testtags.html">Test tags</a>'
-                    )
+                    data["test_tags"] = '<a href="testtags.html">Test tags</a>'
                 f.write(Testplan.render_template(data))
             else:
                 f.write(summary)
